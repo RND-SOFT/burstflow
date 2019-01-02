@@ -38,6 +38,9 @@ module Burst::Builder
 
         to.incoming << from.id
         from.outgoing << to.id
+
+        to.incoming.uniq!
+        from.outgoing.uniq!
       end
     end
 
