@@ -1,17 +1,15 @@
 require 'spec_helper'
 
 describe Burst::Job do
-  
-  let(:w) {Burst::Workflow.new()}
+  let(:w) { Burst::Workflow.new }
 
-  context "initializing" do 
-
+  context 'initializing' do
     class TestJob1 < Burst::Job
     end
 
-    subject{TestJob1.new(w, {}.with_indifferent_access)}
+    subject{ TestJob1.new(w, {}.with_indifferent_access) }
 
-    it "empty" do
+    it 'empty' do
       expect(subject.workflow_id).to eq w.id
       expect(subject.klass).to eq TestJob1.to_s
 
@@ -30,21 +28,21 @@ describe Burst::Job do
       expect(subject.ready_to_start?).to eq true
     end
 
-    it "#enqueue!" do
+    it '#enqueue!' do
       subject.enqueue!
 
       expect(subject.enqueued?).to eq true
       expect(subject.ready_to_start?).to eq false
     end
 
-    it "#start!" do
+    it '#start!' do
       subject.start!
 
       expect(subject.started?).to eq true
       expect(subject.ready_to_start?).to eq false
     end
 
-    it "#finish!" do
+    it '#finish!' do
       subject.finish!
 
       expect(subject.finished?).to eq true
@@ -53,7 +51,7 @@ describe Burst::Job do
       expect(subject.ready_to_start?).to eq false
     end
 
-    it "#fail!" do
+    it '#fail!' do
       subject.fail!
 
       expect(subject.finished?).to eq true
@@ -62,7 +60,7 @@ describe Burst::Job do
       expect(subject.ready_to_start?).to eq false
     end
 
-    it "#suspend!" do
+    it '#suspend!' do
       subject.suspend!
 
       expect(subject.finished?).to eq false
@@ -70,7 +68,7 @@ describe Burst::Job do
       expect(subject.ready_to_start?).to eq true
     end
 
-    it "#resume!" do
+    it '#resume!' do
       subject.suspend!
       subject.resume!
 
@@ -78,8 +76,5 @@ describe Burst::Job do
       expect(subject.resumed?).to eq true
       expect(subject.ready_to_start?).to eq true
     end
-    
   end
-
-
 end

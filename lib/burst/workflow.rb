@@ -1,20 +1,21 @@
 class Burst::Workflow < ActiveRecord::Base
+
   self.table_name_prefix = 'burst_'
 
-  INITIAL   = 'initial'
-  RUNNING   = 'running'
-  FINISHED  = 'finished'
-  FAILED    = 'failed'
-  SUSPENDED = 'suspended'
+  INITIAL   = 'initial'.freeze
+  RUNNING   = 'running'.freeze
+  FINISHED  = 'finished'.freeze
+  FAILED    = 'failed'.freeze
+  SUSPENDED = 'suspended'.freeze
 
   include Burst::WorkflowHelper
   include Burst::Builder
-  
+
   attr_accessor :manager, :job_cache
   define_flow_attributes :jobs, :klass
 
-  after_initialize  do
-    initialize_builder()
+  after_initialize do
+    initialize_builder
 
     @job_cache = {}
 
@@ -30,18 +31,18 @@ class Burst::Workflow < ActiveRecord::Base
       id: self.id,
       jobs: self.jobs,
       klass: self.klass,
-      status: self.status
+      status: status
     }
   end
 
-  def self.build *args
-    wf = self.new()
+  def self.build(*args)
+    wf = new
     wf.configure(*args)
     wf.resolve_dependencies
     wf
   end
 
-  def reload options = nil
+  def reload(options = nil)
     self.job_cache = {}
     super
   end
@@ -51,27 +52,26 @@ class Burst::Workflow < ActiveRecord::Base
     manager.start
   end
 
-  def resume! job_id, data
+  def resume!(job_id, data)
     manager.resume!(get_job(job_id), data)
   end
 
   def status
-    case
-      when failed?
-        FAILED
-      when suspended?
-        SUSPENDED
-      when running?
-        RUNNING
-      when finished?
-        FINISHED
-      else
-        INITIAL
+    if failed?
+      FAILED
+    elsif suspended?
+      SUSPENDED
+    elsif running?
+      RUNNING
+    elsif finished?
+      FINISHED
+    else
+      INITIAL
     end
   end
 
   def initial?
-    self.status == INITIAL
+    status == INITIAL
   end
 
   def finished?
@@ -102,19 +102,17 @@ class Burst::Workflow < ActiveRecord::Base
     end
   end
 
-  def get_job id
+  def get_job(id)
     if job = @job_cache[id]
-      return job
+      job
     else
       job = Burst::Job.from_hash(self, jobs[id].deep_dup)
       @job_cache[job.id] = job
-      return job
+      job
     end
   end
 
-
-
-  def set_job job
+  def set_job(job)
     jobs[job.id] = job.as_json
   end
 
@@ -123,28 +121,28 @@ class Burst::Workflow < ActiveRecord::Base
   end
 
   def find_job(id_or_klass)
-    id = if jobs.keys.include?(id_or_klass)
-      id_or_klass
-    else
-      find_id_by_klass(id_or_klass)
+    id = if jobs.key?(id_or_klass)
+           id_or_klass
+         else
+           find_id_by_klass(id_or_klass)
     end
 
-    return get_job(id)
+    get_job(id)
   end
 
-  def get_job_hash id
+  def get_job_hash(id)
     jobs[id]
   end
 
-private
+  private
 
-  def find_id_by_klass klass
-    finded = jobs.select do |_, job|
-      job[:klass].to_s == klass.to_s
+    def find_id_by_klass(klass)
+      finded = jobs.select do |_, job|
+        job[:klass].to_s == klass.to_s
+      end
+
+      raise 'Duplicat job detected' if finded.count > 1
+      finded.first.second[:id]
     end
-
-    raise "Duplicat job detected" if finded.count > 1
-    return finded.first.second[:id]
-  end
 
 end

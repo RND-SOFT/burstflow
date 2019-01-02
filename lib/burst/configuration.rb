@@ -1,5 +1,7 @@
 module Burst
+
   class Configuration
+
     attr_accessor :concurrency
 
     def self.from_json(json)
@@ -10,15 +12,16 @@ module Burst
       self.concurrency = hash.fetch(:concurrency, 5)
     end
 
-
     def to_hash
       {
-        concurrency: concurrency,
+        concurrency: concurrency
       }
     end
 
     def to_json
       Burst::JSON.encode(to_hash)
     end
+
   end
+
 end

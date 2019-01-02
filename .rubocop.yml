@@ -1,0 +1,89 @@
+AllCops:
+  TargetRubyVersion: 2.5
+  Exclude:
+    - 'storage/**/*'
+    - 'docker/**/*'
+
+Style/AsciiComments:
+  Enabled: false
+  
+Style/RedundantBegin:
+  Enabled: false
+  
+Style/GlobalVars:
+  AllowedVariables: ['$logger', '$root']
+
+Metrics/BlockLength:
+  Exclude: 
+    - 'spec/**/*.rb'
+
+Metrics/MethodLength:
+  Max: 20
+
+Style/ClassAndModuleChildren:
+  EnforcedStyle: compact
+  Enabled: false
+  
+Style/Documentation:
+  Enabled: false
+
+Style/Lambda:
+  Enabled: false
+  
+  
+Style/RaiseArgs:
+  EnforcedStyle: compact
+    
+Metrics/LineLength:
+  Max: 100
+
+#Layout/IndentationWidth:
+#  Enabled: true
+
+#Layout/IndentAssignment:
+#  Enabled: false
+#  IndentationWidth: false
+  
+#Layout/ElseAlignment:
+#  Enabled: false
+  
+#Layout/EndAlignment:
+#  Enabled: false
+  
+#Lint/AssignmentInCondition:
+#  Enabled: false
+
+Layout/IndentationConsistency:
+  EnforcedStyle: rails
+  
+Layout/EmptyLines:
+  Enabled: false
+
+Layout/EmptyLinesAroundClassBody:
+  EnforcedStyle: empty_lines
+
+Layout/EmptyLinesAroundModuleBody:
+  EnforcedStyle: empty_lines
+
+Layout/SpaceInsideBlockBraces:
+  EnforcedStyle: space
+  SpaceBeforeBlockParameters: false
+
+Layout/SpaceAroundBlockParameters:
+  EnforcedStyleInsidePipes: no_space
+
+Layout/SpaceBeforeBlockBraces:
+  Enabled: false
+
+Style/NumericPredicate:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/DoubleNegation:
+  Enabled: false
+
+Style/SymbolArray:
+  Enabled: false
+

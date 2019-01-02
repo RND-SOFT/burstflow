@@ -1,6 +1,6 @@
 require 'rubygems'
 require 'bundler'
-require "bundler/setup"
+require 'bundler/setup'
 Bundler.require(:default)
 
 require 'burst'
@@ -10,21 +10,21 @@ ActiveJob::Base.queue_adapter = :test
 ActiveJob::Base.logger = nil
 
 $root = File.join(File.dirname(__dir__), 'spec')
-Dir[File.join($root, 'support', '**', '*.rb')].each { |f| require f}
+Dir[File.join($root, 'support', '**', '*.rb')].each {|f| require f }
 
 
 
 
 RSpec::Matchers.define :have_jobs do |flow, jobs|
-  match do |actual|
+  match do |_actual|
     expected = jobs.map do |job|
       hash_including(args: include(flow, job))
     end
     expect(ActiveJob::Base.queue_adapter.enqueued_jobs).to match_array(expected)
   end
 
-  failure_message do |actual|
-    "expected queue to have #{jobs}, but instead has: #{ActiveJob::Base.queue_adapter.enqueued_jobs.map{ |j| j[:args][1]}}"
+  failure_message do |_actual|
+    "expected queue to have #{jobs}, but instead has: #{ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j| j[:args][1] }}"
   end
 end
 

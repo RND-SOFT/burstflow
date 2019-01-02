@@ -8,11 +8,9 @@ end
 gem 'rake'
 
 group :test do
-  gem 'pg', '~> 0.21.0'
-  gem 'otr-activerecord'
   gem 'activesupport'
-  gem 'database_cleaner'
   gem 'awesome_print'
+  gem 'database_cleaner'
+  gem 'otr-activerecord'
+  gem 'pg', '~> 0.21.0'
 end
-
-

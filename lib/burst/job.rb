@@ -1,19 +1,20 @@
 class Burst::Job
+
   include Burst::Model
 
   define_stored_attributes :id, :workflow_id, :klass, :params, :incoming, :outgoing, :payloads, :output
   define_stored_attributes :enqueued_at, :started_at, :finished_at, :failed_at, :suspended_at, :resumed_at
 
-  SUSPEND = 'suspend'
+  SUSPEND = 'suspend'.freeze
 
   class Error < ::RuntimeError; end
 
-  def initialize workflow, hash_store = {}
+  def initialize(workflow, hash_store = {})
     @workflow = workflow
     assign_default_values(hash_store)
   end
 
-  def assign_default_values hash_store
+  def assign_default_values(hash_store)
     set_model(hash_store.deep_dup)
 
     self.id ||= SecureRandom.uuid
@@ -27,38 +28,37 @@ class Burst::Job
     assign_default_values(@workflow.get_job_hash(self.id))
   end
 
-  def save! &block
+  def save!
     @workflow.with_lock do
       @workflow.set_job(self)
-      @workflow.save! 
+      @workflow.save!
       yield if block_given?
     end
   end
 
-  def self.from_hash workflow, hash_store
+  def self.from_hash(workflow, hash_store)
     hash_store[:klass].constantize.new(workflow, hash_store)
   end
 
-  #execute this code by ActiveJob. You may return Burst::Job::SUSPEND to suspend job, or call suspend method
-  def perform
-  end
+  # execute this code by ActiveJob. You may return Burst::Job::SUSPEND to suspend job, or call suspend method
+  def perform; end
 
-  #execute this code when resumes after suspending
-  def resume data
+  # execute this code when resumes after suspending
+  def resume(data)
     set_output(data)
   end
 
-  #store data to be available for next jobs
-  def set_output data
+  # store data to be available for next jobs
+  def set_output(data)
     self.output = data
   end
 
-  #mark execution as suspended
+  # mark execution as suspended
   def suspend
     set_output(SUSPEND)
   end
 
-  def configure &block
+  def configure
     @workflow.with_lock do
       yield
       @workflow.resolve_dependencies
@@ -68,7 +68,7 @@ class Burst::Job
     end
   end
 
-  def run klass, opts = {}
+  def run(klass, opts = {})
     opts[:after] = [*opts[:after], self.id].uniq
     opts[:before] = [*opts[:before], *self.outgoing].uniq
     @workflow.run(klass, opts)
@@ -79,23 +79,22 @@ class Burst::Job
       workflow_id: self.workflow_id,
       id: self.id,
       klass: self.klass,
-      params: self.params,
+      params: params,
       incoming: self.incoming,
       outgoing: self.outgoing,
-      output: self.output,
-      started_at: self.started_at,
-      enqueued_at: self.enqueued_at,
-      finished_at: self.finished_at,      
-      failed_at: self.failed_at,
-      suspended_at: self.suspended_at,
-      resumed_at: self.resumed_at,
+      output: output,
+      started_at: started_at,
+      enqueued_at: enqueued_at,
+      finished_at: finished_at,
+      failed_at: failed_at,
+      suspended_at: suspended_at,
+      resumed_at: resumed_at
     }
   end
 
-
-  #mark job as enqueued when it is scheduled to queue
+  # mark job as enqueued when it is scheduled to queue
   def enqueue!
-    raise Error.new("Already enqueued") if enqueued?
+    raise Error.new('Already enqueued') if enqueued?
     self.enqueued_at = current_timestamp
     self.started_at = nil
     self.finished_at = nil
@@ -104,33 +103,33 @@ class Burst::Job
     self.resumed_at = nil
   end
 
-  #mark job as started when it is start performing
+  # mark job as started when it is start performing
   def start!
-    raise Error.new("Already started") if started?
+    raise Error.new('Already started') if started?
     self.started_at = current_timestamp
   end
 
-  #mark job as finished when it is finish performing
+  # mark job as finished when it is finish performing
   def finish!
-    raise Error.new("Already finished") if finished?
+    raise Error.new('Already finished') if finished?
     self.finished_at = current_timestamp
   end
 
-  #mark job as failed when it is failed
+  # mark job as failed when it is failed
   def fail!
-    raise Error.new("Already failed") if failed?
+    raise Error.new('Already failed') if failed?
     self.finished_at = self.failed_at = current_timestamp
   end
 
-  #mark job as suspended
+  # mark job as suspended
   def suspend!
     self.suspended_at = current_timestamp
   end
 
-  #mark job as resumed
+  # mark job as resumed
   def resume!
-    raise Error.new("Not suspended ") if !suspended?
-    raise Error.new("Already resumed ") if resumed?
+    raise Error.new('Not suspended ') unless suspended?
+    raise Error.new('Already resumed ') if resumed?
     self.resumed_at = current_timestamp
   end
 

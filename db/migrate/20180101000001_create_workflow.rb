@@ -1,4 +1,5 @@
 class CreateWorkflow < ActiveRecord::Migration[5.1]
+
   def change
     enable_extension 'pgcrypto'
 
@@ -8,4 +9,5 @@ class CreateWorkflow < ActiveRecord::Migration[5.1]
       t.timestamps
     end
   end
+
 end

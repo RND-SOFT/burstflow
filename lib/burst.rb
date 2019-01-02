@@ -1,24 +1,24 @@
 require 'rubygems'
 require 'bundler'
-require "bundler/setup"
+require 'bundler/setup'
 Bundler.require(:default)
 
-require "active_support/all"
-require "active_support/dependencies"
-require "active_record"
-require "active_job"
+require 'active_support/all'
+require 'active_support/dependencies'
+require 'active_record'
+require 'active_job'
 
-require "pathname"
-require "securerandom"
+require 'pathname'
+require 'securerandom'
 
-require "burst/configuration"
-require "burst/model"
-require "burst/builder"
-require "burst/manager"
-require "burst/job"
-require "burst/workflow_helper"
-require "burst/workflow"
-require "burst/worker"
+require 'burst/configuration'
+require 'burst/model'
+require 'burst/builder'
+require 'burst/manager'
+require 'burst/job'
+require 'burst/workflow_helper'
+require 'burst/workflow'
+require 'burst/worker'
 
 module Burst
 
@@ -33,4 +33,5 @@ module Burst
   def self.configure
     yield configuration
   end
+
 end

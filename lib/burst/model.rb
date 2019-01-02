@@ -1,8 +1,8 @@
 module Burst::Model
+
   extend ActiveSupport::Concern
 
   included do |klass|
-
     klass.include ActiveModel::Model
     klass.include ActiveModel::Dirty
     klass.include ActiveModel::Serialization
@@ -10,7 +10,7 @@ module Burst::Model
 
     attr_accessor :model
 
-    def set_model model
+    def set_model(model)
       @model = model
     end
 
@@ -21,18 +21,16 @@ module Burst::Model
     end
 
     def ==(other)
-      self.instance_variable_get('@model') == other.instance_variable_get('@model')
-    end
-  
-    def as_json *args
-      self.serializable_hash
+      instance_variable_get('@model') == other.instance_variable_get('@model')
     end
 
+    def as_json(*_args)
+      serializable_hash
+    end
   end
 
-  class_methods do 
-
-    def define_stored_attributes *keys
+  class_methods do
+    def define_stored_attributes(*keys)
       keys.each do |key|
         define_attribute_methods key.to_sym
 
@@ -46,7 +44,6 @@ module Burst::Model
         end
       end
     end
-
   end
 
 end

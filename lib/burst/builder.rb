@@ -1,15 +1,15 @@
 module Burst::Builder
+
   extend ActiveSupport::Concern
 
-  included do |klass|
-
+  included do |_klass|
     attr_accessor :build_deps
 
     def initialize_builder
       @build_deps = []
     end
 
-    def run klass, opts = {}
+    def run(klass, opts = {})
       opts = opts.with_indifferent_access
 
       before_deps = opts.delete(:before) || []
@@ -18,11 +18,11 @@ module Burst::Builder
       job = klass.new(self, opts)
 
       [*before_deps].each do |dep|
-        build_deps << {from: job.id, to: dep.to_s }
+        build_deps << { from: job.id, to: dep.to_s }
       end
 
       [*after_deps].each do |dep|
-        build_deps << {from: dep.to_s, to: job.id }
+        build_deps << { from: dep.to_s, to: job.id }
       end
 
       job_cache[job.id] = job
@@ -43,6 +43,6 @@ module Burst::Builder
         from.outgoing.uniq!
       end
     end
-
   end
+
 end
