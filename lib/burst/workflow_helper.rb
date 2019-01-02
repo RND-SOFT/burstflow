@@ -32,8 +32,8 @@ module Burst::WorkflowHelper
       last_job&.finished_at
     end
 
-    def configure
-      instance_eval &self.class.configuration
+    def configure *args
+      instance_exec *args, &self.class.configuration
     end
 
   end

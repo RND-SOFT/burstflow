@@ -1,14 +1,14 @@
 class Burst::Worker < ::ActiveJob::Base
 
-  def perform(workflow_id, job_id, continue_data = nil)
+  def perform(workflow_id, job_id, resume_data = nil)
     setup(workflow_id, job_id)
 
     job.payloads = incoming_payloads
 
-    result = if continue_data.nil?
+    result = if resume_data.nil?
       @manager.start_job!(job)
     else
-      @manager.continue_job!(job, continue_data)
+      @manager.resume_job!(job, resume_data)
     end
 
     @manager.job_performed!(job, result)

@@ -110,7 +110,7 @@ describe Burst::Manager do
     w = CaseW2.find(w.id)
 
     perform_enqueued_jobs do
-      w.continue!('job2', 'result')
+      w.resume!('job2', 'result')
     end
 
     w.reload
@@ -137,7 +137,7 @@ describe Burst::Manager do
         super
       end
     end
-    
+
     class DynJob2 < TestCaseJob; end
     class DynJob3 < TestCaseJob; end
   

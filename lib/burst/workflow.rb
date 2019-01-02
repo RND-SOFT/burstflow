@@ -51,8 +51,8 @@ class Burst::Workflow < ActiveRecord::Base
     manager.start
   end
 
-  def continue! job_id, data
-    manager.continue!(get_job(job_id), data)
+  def resume! job_id, data
+    manager.resume!(get_job(job_id), data)
   end
 
   def status

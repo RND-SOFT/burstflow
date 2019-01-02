@@ -22,8 +22,8 @@ class Burst::Manager
     end
   end
 
-  def continue! job, data
-    job.continue!
+  def resume! job, data
+    job.resume!
     job.save! do
       Burst::Worker.perform_later(workflow.id, job.id, data)
     end
@@ -36,8 +36,8 @@ class Burst::Manager
     job.perform
   end
 
-  def continue_job! job, data
-    job.continue(data)
+  def resume_job! job, data
+    job.resume(data)
   end
 
   def suspend_job! job

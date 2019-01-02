@@ -25,7 +25,7 @@ describe Burst::Job do
       expect(subject.finished?).to eq false
       expect(subject.failed?).to eq false
       expect(subject.suspended?).to eq false
-      expect(subject.continued?).to eq false
+      expect(subject.resumed?).to eq false
 
       expect(subject.ready_to_start?).to eq true
     end
@@ -70,12 +70,12 @@ describe Burst::Job do
       expect(subject.ready_to_start?).to eq true
     end
 
-    it "#continue!" do
+    it "#resume!" do
       subject.suspend!
-      subject.continue!
+      subject.resume!
 
       expect(subject.finished?).to eq false
-      expect(subject.continued?).to eq true
+      expect(subject.resumed?).to eq true
       expect(subject.ready_to_start?).to eq true
     end
     

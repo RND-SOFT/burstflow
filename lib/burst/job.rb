@@ -2,7 +2,7 @@ class Burst::Job
   include Burst::Model
 
   define_stored_attributes :id, :workflow_id, :klass, :params, :incoming, :outgoing, :payloads, :output
-  define_stored_attributes :enqueued_at, :started_at, :finished_at, :failed_at, :suspended_at, :continued_at
+  define_stored_attributes :enqueued_at, :started_at, :finished_at, :failed_at, :suspended_at, :resumed_at
 
   SUSPEND = 'suspend'
 
@@ -43,8 +43,8 @@ class Burst::Job
   def perform
   end
 
-  #execute this code when ressurected after suspending
-  def continue data
+  #execute this code when resumes after suspending
+  def resume data
     set_output(data)
   end
 
@@ -88,7 +88,7 @@ class Burst::Job
       finished_at: self.finished_at,      
       failed_at: self.failed_at,
       suspended_at: self.suspended_at,
-      continued_at: self.continued_at,
+      resumed_at: self.resumed_at,
     }
   end
 
@@ -101,7 +101,7 @@ class Burst::Job
     self.finished_at = nil
     self.failed_at = nil
     self.suspended_at = nil
-    self.continued_at = nil
+    self.resumed_at = nil
   end
 
   #mark job as started when it is start performing
@@ -127,11 +127,11 @@ class Burst::Job
     self.suspended_at = current_timestamp
   end
 
-  #mark job as continue
-  def continue!
+  #mark job as resumed
+  def resume!
     raise Error.new("Not suspended ") if !suspended?
-    raise Error.new("Already continued ") if continued?
-    self.continued_at = current_timestamp
+    raise Error.new("Already resumed ") if resumed?
+    self.resumed_at = current_timestamp
   end
 
   def enqueued?
@@ -155,11 +155,11 @@ class Burst::Job
   end
 
   def suspended?
-    !suspended_at.nil? && !continued?
+    !suspended_at.nil? && !resumed?
   end
 
-  def continued?
-    !continued_at.nil?
+  def resumed?
+    !resumed_at.nil?
   end
 
   def succeeded?
