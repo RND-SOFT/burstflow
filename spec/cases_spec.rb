@@ -55,7 +55,7 @@ describe Burst::Manager do
 
 
   it "case1 no async job state" do
-    w = CaseW1.create!
+    w = CaseW1.build
 
     perform_enqueued_jobs do
       w.start!
@@ -67,7 +67,7 @@ describe Burst::Manager do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq true
     expect(w.running?).to eq false
-    expect(w.status).to eq :finished
+    expect(w.status).to eq Burst::Workflow::FINISHED
 
     expect($job_handler.jobs.count).to eq 3
     expect($job_handler.find_job(CaseJob1)).to include(output: 'CaseJob1', params: {p1: 1})
@@ -89,7 +89,7 @@ describe Burst::Manager do
   end
 
   it "case2 with async job state" do
-    w = CaseW2.create!
+    w = CaseW2.build
 
     perform_enqueued_jobs do
       w.start!
@@ -102,7 +102,7 @@ describe Burst::Manager do
     expect(w.finished?).to eq false
     expect(w.running?).to eq true
     expect(w.suspended?).to eq true
-    expect(w.status).to eq :suspended
+    expect(w.status).to eq Burst::Workflow::SUSPENDED
 
     expect($job_handler.jobs.count).to eq 2
     expect($job_handler.find_job(CaseJob1)).to include(output: 'CaseJob1', params: {p1: 1})
@@ -113,7 +113,7 @@ describe Burst::Manager do
     w = CaseW2.find(w.id)
 
     perform_enqueued_jobs do
-      w.ressurect!('job2', 'result')
+      w.continue!('job2', 'result')
     end
 
     w.reload

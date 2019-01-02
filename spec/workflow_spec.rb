@@ -53,25 +53,19 @@ describe Burst::Workflow do
 
   context "model" do
     it "default store" do
-      store = Burst::Store.create!
-      w = Burst::Workflow.new(store)
+      w = Burst::Workflow.new()
 
-      expect(w.attributes).to include(id: store.id, jobs: {}, klass: Burst::Workflow.to_s)
+      expect(w.attributes).to include(:id, jobs: {}, klass: Burst::Workflow.to_s)
 
       expect(w.started?).to eq false
       expect(w.failed?).to eq false
       expect(w.finished?).to eq true
       expect(w.running?).to eq false
-      expect(w.status).to eq :finished
-
-      expect(store.flow[:klass]).to eq w.klass
-      w.klass = '111'
-      expect(store.flow[:klass]).to eq w.klass
+      expect(w.status).to eq Burst::Workflow::FINISHED
     end
 
     it "store persistance" do
-      store = Burst::Store.create!()
-      w = Burst::Workflow.new(store)
+      w = Burst::Workflow.new()
       w.save!
 
       w2 = Burst::Workflow.find(w.id)
@@ -149,7 +143,7 @@ describe Burst::Workflow do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq false
     expect(w.running?).to eq false
-    expect(w.status).to eq :initial
+    expect(w.status).to eq Burst::Workflow::INITIAL
 
     w.start!
 
@@ -159,7 +153,7 @@ describe Burst::Workflow do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq false
     expect(w.running?).to eq false
-    expect(w.status).to eq :initial
+    expect(w.status).to eq Burst::Workflow::INITIAL
   end
 
   it "start with perform" do
@@ -170,7 +164,7 @@ describe Burst::Workflow do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq false
     expect(w.running?).to eq false
-    expect(w.status).to eq :initial
+    expect(w.status).to eq Burst::Workflow::INITIAL
 
     perform_enqueued_jobs do
       w.start!
@@ -182,7 +176,7 @@ describe Burst::Workflow do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq true
     expect(w.running?).to eq false
-    expect(w.status).to eq :finished
+    expect(w.status).to eq Burst::Workflow::FINISHED
   end
 
 end

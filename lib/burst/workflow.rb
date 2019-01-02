@@ -1,40 +1,41 @@
-class Burst::Workflow
-  include Burst::Model
+class Burst::Workflow < ActiveRecord::Base
+  self.table_name_prefix = 'burst_'
+
+  INITIAL   = 'initial'
+  RUNNING   = 'running'
+  FINISHED  = 'finished'
+  FAILED    = 'failed'
+  SUSPENDED = 'suspended'
+
+  include Burst::WorkflowHelper
   include Burst::Builder
+  
+  attr_accessor :manager, :job_cache
+  define_flow_attributes :jobs, :klass
 
-  define_stored_attributes :id, :jobs, :klass
-
-  attr_accessor :store, :job_cache
-
-  def initialize store
+  after_initialize  do
     initialize_builder()
 
-    @store = store
     @job_cache = {}
 
-    assign_default_values(@store.flow)
-  end
-
-
-  def assign_default_values hash_store
-    set_model(hash_store)
-
-    self.id = @store.id
+    self.id ||= SecureRandom.uuid
     self.jobs ||= {}.with_indifferent_access
     self.klass ||= self.class.to_s
-  end
 
+    @manager = Burst::Manager.new(self)
+  end
 
   def attributes
     {
       id: self.id,
       jobs: self.jobs,
       klass: self.klass,
+      status: self.status
     }
   end
 
   def self.build *args
-    wf = self.new(Burst::Store.new)
+    wf = self.new()
     wf.configure(*args)
     wf.resolve_dependencies
     wf.build_jobs.each do |job|
@@ -44,56 +45,37 @@ class Burst::Workflow
     wf
   end
 
-  def self.create! *args
-    wf = self.build(*args)
-    wf.save!
-  end
-
-  def self.find id
-    self.new(Burst::Store.find(id))
-  end
-
-
-  def save!
-    store.save!
-    self
-  end
-
-  def reload
-    self.store.reload
+  def reload options = nil
     self.job_cache = {}
-    assign_default_values(self.store.flow)
-  end
-
-  def with_lock &block
-    store.with_lock do
-      self.job_cache = {}
-      assign_default_values(self.store.flow)
-      yield
-    end
+    super
   end
 
   def start!
-    Burst::Manager.new(self).start
+    save!
+    manager.start
   end
 
-  def ressurect! job_id, data
-    Burst::Manager.new(self).ressurect(get_job(job_id), data)
+  def continue! job_id, data
+    manager.continue!(get_job(job_id), data)
   end
 
   def status
     case
       when failed?
-        :failed
+        FAILED
       when suspended?
-        :suspended
+        SUSPENDED
       when running?
-        :running
+        RUNNING
       when finished?
-        :finished
+        FINISHED
       else
-        :initial
+        INITIAL
     end
+  end
+
+  def initial?
+    self.status == INITIAL
   end
 
   def finished?
@@ -113,9 +95,16 @@ class Burst::Workflow
   end
 
   def suspended?
-    each_job.any?(&:suspended?)
+    !failed? && each_job.any?(&:suspended?)
   end
 
+  def each_job &block
+    Enumerator.new do |y|
+      jobs.keys.each do |id|
+        y << get_job(id)
+      end
+    end
+  end
 
   def get_job id
     if job = @job_cache[id]
@@ -127,13 +116,7 @@ class Burst::Workflow
     end
   end
 
-  def each_job &block
-    Enumerator.new do |y|
-      jobs.keys.each do |id|
-        y << get_job(id)
-      end
-    end
-  end
+
 
   def set_job job
     jobs[job.id] = job.as_json
@@ -160,21 +143,7 @@ class Burst::Workflow
   def configure *args
   end
 
-  def started_at
-    first_job&.started_at
-  end
 
-  def finished_at
-    last_job&.finished_at
-  end
-
-  def first_job
-    each_job.min_by{ |n| n.started_at || Time.now.to_i }
-  end
-
-  def last_job
-    each_job.max_by{ |n| n.finished_at || 0 } if finished?
-  end
 
 private
 

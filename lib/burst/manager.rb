@@ -7,37 +7,45 @@ class Burst::Manager
 
   def start
     workflow.with_lock do
+      raise "Already started" if !workflow.initial?
+
       workflow.initial_jobs.each do |job|
-        enqueue_job(job)
+        enqueue_job!(job)
       end
     end
   end
 
-  def enqueue_job job
+  def enqueue_job! job
     job.enqueue!
     job.save! do
       Burst::Worker.perform_later(workflow.id, job.id)
     end
   end
 
-  def ressurect job, data
-    job.ressurect!
+  def continue! job, data
+    job.continue!
     job.save! do
       Burst::Worker.perform_later(workflow.id, job.id, data)
     end
   end
 
-  def mark_as_started job
+  def start_job! job
     job.start!
     job.save!
+
+    job.perform
   end
 
-  def mark_as_suspended job
+  def continue_job! job, data
+    job.continue(data)
+  end
+
+  def suspend_job! job
     job.suspend!
     job.save!
   end
 
-  def mark_as_finished job
+  def finish_job! job
     job.finish!
     job.save!
 
@@ -46,7 +54,15 @@ class Burst::Manager
     end
   end
 
-  def mark_as_failed job
+  def job_performed! job, result
+    if result == Burst::Job::SUSPEND || job.output == Burst::Job::SUSPEND
+      suspend_job!(job)
+    else
+      finish_job!(job)
+    end
+  end
+
+  def fail_job! job
     job.fail!
     job.save!
   end
@@ -56,7 +72,7 @@ class Burst::Manager
       out = workflow.get_job(job_id)
 
       if out.ready_to_start?
-        enqueue_job(out)
+        enqueue_job!(out)
       end
     end
   end

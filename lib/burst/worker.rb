@@ -1,25 +1,20 @@
 class Burst::Worker < ::ActiveJob::Base
 
-  def perform(workflow_id, job_id, ressurect_data = nil)
+  def perform(workflow_id, job_id, continue_data = nil)
     setup(workflow_id, job_id)
 
     job.payloads = incoming_payloads
 
-    result = if ressurect_data.nil?
-      @manager.mark_as_started(job)
-      job.perform
+    result = if continue_data.nil?
+      @manager.start_job!(job)
     else
-      job.perform_ressurect(ressurect_data)
+      @manager.continue_job!(job, continue_data)
     end
 
-    if result == Burst::Job::SUSPEND || job.output == Burst::Job::SUSPEND
-      @manager.mark_as_suspended(job)
-    else
-      @manager.mark_as_finished(job)
-    end
+    @manager.job_performed!(job, result)
 
   rescue StandardError => e
-    @manager.mark_as_failed(job)
+    @manager.fail_job!(job)
     raise e
   end
 
@@ -31,7 +26,7 @@ private
   def setup(workflow_id, job_id)
     @workflow = Burst::Workflow.find(workflow_id)
     @job = @workflow.get_job(job_id)
-    @manager = Burst::Manager.new(@workflow)
+    @manager = @workflow.manager
   end
 
   def incoming_payloads

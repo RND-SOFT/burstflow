@@ -3,8 +3,7 @@ require 'spec_helper'
 describe Burst::Job do
   include ActiveJob::TestHelper
   
-  let(:store){Burst::Store.new}
-  let(:w) {Burst::Workflow.new(store)}
+  let(:w) {Burst::Workflow.new()}
 
   context "initializing" do 
 

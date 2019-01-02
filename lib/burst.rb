@@ -21,10 +21,10 @@ require "burst/configuration"
 #require "gush/errors"
 #require "gush/job"
 
-require "burst/store"
 require "burst/model"
 require "burst/builder"
 require "burst/job"
+require "burst/workflow_helper"
 require "burst/workflow"
 require "burst/worker"
 
