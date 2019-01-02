@@ -1,0 +1,15 @@
+development: &base
+  adapter:  postgresql
+  host:     <%= ENV['DATABASE_HOST'] || 'localhost' %>
+  port:     <%= ENV['DATABASE_PORT'] || 5432 %>
+  encoding: unicode
+  database: <%= ENV['DATABASE_NAME'] || 'testdb' %>
+  pool:     4
+  username: <%= ENV['DATABASE_USER'] || 'postgres' %>
+  password: <%= ENV['DATABASE_PASS'] || '' %>
+
+test:
+ <<: *base
+
+production:
+ <<: *base
