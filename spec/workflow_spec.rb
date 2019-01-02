@@ -19,7 +19,7 @@ describe Burst::Workflow do
  
 
   class W1 < Burst::Workflow
-    def configure
+    configure do |*args|
       id1 = run WfJob1, id: 'job1'
       run WfJob2, id: 'job2', after: id1
       run WfJob3, after: [WfJob1, 'job2']

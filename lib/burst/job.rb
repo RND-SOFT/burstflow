@@ -58,6 +58,22 @@ class Burst::Job
     set_output(SUSPEND)
   end
 
+  def configure &block
+    @workflow.with_lock do
+      yield
+      @workflow.resolve_dependencies
+      @workflow.save!
+      @workflow.all_jobs.to_a.each(&:save!)
+      reload
+    end
+  end
+
+  def run klass, opts = {}
+    opts[:after] = [*opts[:after], self.id].uniq
+    opts[:before] = [*opts[:before], *self.outgoing].uniq
+    @workflow.run(klass, opts)
+  end
+
   def attributes
     {
       workflow_id: self.workflow_id,

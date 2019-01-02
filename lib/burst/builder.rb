@@ -3,10 +3,9 @@ module Burst::Builder
 
   included do |klass|
 
-    attr_accessor :build_deps, :build_jobs
+    attr_accessor :build_deps
 
     def initialize_builder
-      @build_jobs = []
       @build_deps = []
     end
 
@@ -17,7 +16,6 @@ module Burst::Builder
       after_deps = opts.delete(:after) || []
 
       job = klass.new(self, opts)
-      build_jobs << job
 
       [*before_deps].each do |dep|
         build_deps << {from: job.id, to: dep.to_s }
@@ -27,24 +25,17 @@ module Burst::Builder
         build_deps << {from: dep.to_s, to: job.id }
       end
 
-      job.id
-    end
+      job_cache[job.id] = job
+      jobs[job.id] = job.model
 
-    def lookup_job(id_or_klass)
-      finded = build_jobs.select do |job|
-        [job.id.to_s, job.klass.to_s].include?(id_or_klass.to_s)
-      end
-  
-      raise "Duplicat job detected" if finded.count > 1
-  
-      finded.first
+      job.id
     end
 
     def resolve_dependencies
       build_deps.each do |dependency|
-        from = lookup_job(dependency[:from])
-        to   = lookup_job(dependency[:to])
-  
+        from = find_job(dependency[:from])
+        to   = find_job(dependency[:to])
+
         to.incoming << from.id
         from.outgoing << to.id
       end

@@ -38,10 +38,6 @@ class Burst::Workflow < ActiveRecord::Base
     wf = self.new()
     wf.configure(*args)
     wf.resolve_dependencies
-    wf.build_jobs.each do |job|
-      wf.jobs[job.id] = job.as_json
-    end
-
     wf
   end
 
@@ -79,7 +75,7 @@ class Burst::Workflow < ActiveRecord::Base
   end
 
   def finished?
-    each_job.all?(&:finished?)
+    all_jobs.all?(&:finished?)
   end
 
   def started?
@@ -91,14 +87,14 @@ class Burst::Workflow < ActiveRecord::Base
   end
 
   def failed?
-    each_job.any?(&:failed?)
+    all_jobs.any?(&:failed?)
   end
 
   def suspended?
-    !failed? && each_job.any?(&:suspended?)
+    !failed? && all_jobs.any?(&:suspended?)
   end
 
-  def each_job &block
+  def all_jobs
     Enumerator.new do |y|
       jobs.keys.each do |id|
         y << get_job(id)
@@ -123,7 +119,7 @@ class Burst::Workflow < ActiveRecord::Base
   end
 
   def initial_jobs
-    each_job.select(&:initial?)
+    all_jobs.select(&:initial?)
   end
 
   def find_job(id_or_klass)
@@ -139,11 +135,6 @@ class Burst::Workflow < ActiveRecord::Base
   def get_job_hash id
     jobs[id]
   end
-
-  def configure *args
-  end
-
-
 
 private
 

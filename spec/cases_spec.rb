@@ -42,10 +42,8 @@ describe Burst::Manager do
     end
   end
 
- 
-
   class CaseW1 < Burst::Workflow
-    def configure
+    configure do |*args|
       id1 = run CaseJob1, id: 'job1', params: {p1: 1}
       run CaseJob2, id: 'job2', after: id1, params: {p2: 2}
       run CaseJob3, after: [CaseJob1, 'job2']
@@ -80,7 +78,7 @@ describe Burst::Manager do
   end
 
   class CaseW2 < Burst::Workflow
-    def configure
+    configure do |*args|
       id1 = run CaseJob1, id: 'job1', params: {p1: 1}
       run CaseAsyncJob, id: 'job2', after: id1, params: {p2: 2}
       run CaseJob3, after: [CaseJob1, 'job2']
@@ -128,5 +126,38 @@ describe Burst::Manager do
     expect($job_handler.find_job(CaseJob3)[:payloads]).to include({id: 'job2', class: 'CaseAsyncJob', payload: 'result'})
   end
 
+  describe "dynamic jobs with payloads" do
+    class DynJob1 < TestCaseJob
+      def perform
+        configure do
+          run DynJob2, params: {a:1}
+          run DynJob2, params: {a:2}
+          run DynJob2, params: {a:3}
+        end
+        super
+      end
+    end
+    
+    class DynJob2 < TestCaseJob; end
+    class DynJob3 < TestCaseJob; end
+  
+    class DynFlow1 < Burst::Workflow
+      configure do |*args|
+        run DynJob1
+        run DynJob3, after: DynJob1
+      end
+    end
+
+    it "create intemediate jobs" do
+      w = DynFlow1.build
+
+      perform_enqueued_jobs do
+        w.start!
+      end
+
+      expect($job_handler.jobs.count).to eq 5
+      expect($job_handler.jobs.last['payloads'].count).to eq 4
+    end
+  end
 
 end

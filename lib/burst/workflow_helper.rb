@@ -17,11 +17,11 @@ module Burst::WorkflowHelper
     serialize :flow, JSONBWithIndifferentAccess
 
     def first_job
-      each_job.min_by{ |n| n.started_at || Time.now.to_i }
+      all_jobs.min_by{ |n| n.started_at || Time.now.to_i }
     end
   
     def last_job
-      each_job.max_by{ |n| n.finished_at || 0 } if finished?
+      all_jobs.max_by{ |n| n.finished_at || 0 } if finished?
     end
 
     def started_at
@@ -30,6 +30,10 @@ module Burst::WorkflowHelper
   
     def finished_at
       last_job&.finished_at
+    end
+
+    def configure
+      instance_eval &self.class.configuration
     end
 
   end
@@ -48,6 +52,34 @@ module Burst::WorkflowHelper
       end
     end
 
+    def configure &block
+      @configuration = block
+    end
+
+    def configuration
+      @configuration
+    end
   end
 
 end
+
+
+# class Test
+#   def self.configure &block
+#     @c = block
+#   end
+
+#   def self.c
+#     @c
+#   end
+
+#   def go
+#     puts "111111"
+#   end
+
+#   def run
+#     instance_eval &Test.c
+#   end
+
+
+# end
