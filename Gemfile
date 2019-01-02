@@ -6,10 +6,13 @@ platforms :mri, :ruby do
 end
 
 gem 'rake'
-gem 'pg', '~> 0.21.0'
 
-gem 'otr-activerecord'
-gem 'activerecord'
-gem 'activesupport'
-gem 'database_cleaner'
-gem 'awesome_print'
+group :test do
+  gem 'pg', '~> 0.21.0'
+  gem 'otr-activerecord'
+  gem 'activesupport'
+  gem 'database_cleaner'
+  gem 'awesome_print'
+end
+
+

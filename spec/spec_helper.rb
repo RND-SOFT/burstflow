@@ -4,15 +4,13 @@ require "bundler/setup"
 Bundler.require(:default)
 
 require 'burst'
-require 'fakeredis'
-require 'json'
 
 
 ActiveJob::Base.queue_adapter = :test
 ActiveJob::Base.logger = nil
 
 $root = File.join(File.dirname(__dir__), 'spec')
-Dir[File.join(__dir__, 'support', '**', '*.rb')].each { |f| require f}
+Dir[File.join($root, 'support', '**', '*.rb')].each { |f| require f}
 
 
 

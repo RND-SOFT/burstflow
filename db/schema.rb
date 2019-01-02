@@ -18,10 +18,8 @@ ActiveRecord::Schema.define(version: 2018_01_01_000001) do
 
   create_table "burst_workflows", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.jsonb "flow", default: {}, null: false
-    t.string "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["status"], name: "index_burst_workflows_on_status"
   end
 
 end
