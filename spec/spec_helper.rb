@@ -8,7 +8,7 @@ require 'fakeredis'
 require 'json'
 
 
-ActiveJob::Base.queue_adapter = :test
+ActiveJob::Base.queue_adapter = :async
 ActiveJob::Base.logger = nil
 
 $root = File.join(File.dirname(__dir__), 'spec')
