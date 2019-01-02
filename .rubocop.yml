@@ -3,6 +3,12 @@ AllCops:
   Exclude:
     - 'storage/**/*'
     - 'docker/**/*'
+    - 'lib/docker_toolkit/childprocess/**/*'
+    - 'lib/docker_toolkit/childprocess,rb'
+    
+
+Security/YAMLLoad:
+  Enabled: false
 
 Style/AsciiComments:
   Enabled: false
@@ -33,6 +39,9 @@ Style/Lambda:
   
 Style/RaiseArgs:
   EnforcedStyle: compact
+
+Style/SpecialGlobalVars:
+  Enabled: false
     
 Metrics/LineLength:
   Max: 100
