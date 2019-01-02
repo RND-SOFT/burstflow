@@ -1,7 +1,6 @@
 require 'spec_helper'
 
 describe Burst::Manager do
-  include ActiveJob::TestHelper
   
   class JobHandler
     attr_accessor :jobs

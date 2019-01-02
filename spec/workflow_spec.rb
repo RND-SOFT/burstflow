@@ -1,8 +1,6 @@
 require 'spec_helper'
 
 describe Burst::Workflow do
-  include ActiveJob::TestHelper
-  
 
   class TestJob < Burst::Job
     def perform
@@ -146,6 +144,9 @@ describe Burst::Workflow do
     expect(w.status).to eq Burst::Workflow::INITIAL
 
     w.start!
+
+    expect(Burst::Worker).to have_jobs(w.id, ['job1'])
+    expect(Burst::Worker).not_to have_jobs(w.id, ['job2'])
 
     w = W1.find(w.id)
 

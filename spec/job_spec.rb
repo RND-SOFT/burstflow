@@ -1,7 +1,6 @@
 require 'spec_helper'
 
 describe Burst::Job do
-  include ActiveJob::TestHelper
   
   let(:w) {Burst::Workflow.new()}
 
@@ -10,19 +9,77 @@ describe Burst::Job do
     class TestJob1 < Burst::Job
     end
 
+    subject{TestJob1.new(w, {}.with_indifferent_access)}
+
     it "empty" do
-      hash = {}.with_indifferent_access
-      job = TestJob1.new(w, hash)
+      expect(subject.workflow_id).to eq w.id
+      expect(subject.klass).to eq TestJob1.to_s
 
-      expect(job.workflow_id).to eq w.id
-      expect(job.klass).to eq TestJob1.to_s
-      expect(job.finished?).to eq false
-      expect(job.started?).to eq false
-      expect(job.initial?).to eq true
+      expect(subject.incoming).to eq []
+      expect(subject.outgoing).to eq []
 
-      expect(job.ready_to_start?).to eq true
+      expect(subject.initial?).to eq true
+
+      expect(subject.enqueued?).to eq false
+      expect(subject.started?).to eq false
+      expect(subject.finished?).to eq false
+      expect(subject.failed?).to eq false
+      expect(subject.suspended?).to eq false
+      expect(subject.continued?).to eq false
+
+      expect(subject.ready_to_start?).to eq true
     end
+
+    it "#enqueue!" do
+      subject.enqueue!
+
+      expect(subject.enqueued?).to eq true
+      expect(subject.ready_to_start?).to eq false
+    end
+
+    it "#start!" do
+      subject.start!
+
+      expect(subject.started?).to eq true
+      expect(subject.ready_to_start?).to eq false
+    end
+
+    it "#finish!" do
+      subject.finish!
+
+      expect(subject.finished?).to eq true
+      expect(subject.succeeded?).to eq true
+      expect(subject.failed?).to eq false
+      expect(subject.ready_to_start?).to eq false
+    end
+
+    it "#fail!" do
+      subject.fail!
+
+      expect(subject.finished?).to eq true
+      expect(subject.succeeded?).to eq false
+      expect(subject.failed?).to eq true
+      expect(subject.ready_to_start?).to eq false
+    end
+
+    it "#suspend!" do
+      subject.suspend!
+
+      expect(subject.finished?).to eq false
+      expect(subject.suspended?).to eq true
+      expect(subject.ready_to_start?).to eq true
+    end
+
+    it "#continue!" do
+      subject.suspend!
+      subject.continue!
+
+      expect(subject.finished?).to eq false
+      expect(subject.continued?).to eq true
+      expect(subject.ready_to_start?).to eq true
+    end
+    
   end
-  
+
 
 end

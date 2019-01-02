@@ -103,7 +103,7 @@ class Burst::Job
   #mark job as failed when it is failed
   def fail!
     raise Error.new("Already failed") if failed?
-    self.finished_at = failed_at = current_timestamp
+    self.finished_at = self.failed_at = current_timestamp
   end
 
   #mark job as suspended
