@@ -1,4 +1,4 @@
-module Burst::WorkflowHelper
+module Burstflow::WorkflowHelper
 
   extend ActiveSupport::Concern
 

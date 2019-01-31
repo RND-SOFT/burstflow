@@ -3,7 +3,7 @@ require 'bundler'
 require 'bundler/setup'
 Bundler.require(:default)
 
-require 'burst'
+require 'burstflow'
 
 
 ActiveJob::Base.queue_adapter = :test

@@ -1,0 +1,2 @@
+module Burstflow::Helpers
+end

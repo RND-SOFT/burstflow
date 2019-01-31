@@ -1,7 +1,11 @@
 require 'spec_helper'
 
-describe Burst::Workflow do
-  class TestJob < Burst::Job
+describe Burstflow::Workflow do
+
+  
+
+
+  class TestJob < Burstflow::Job
 
     def perform
       # puts "#{self.class} perform"
@@ -19,7 +23,7 @@ describe Burst::Workflow do
   end
 
 
-  class W1 < Burst::Workflow
+  class W1 < Burstflow::Workflow
 
     configure do |*_args|
       id1 = run WfJob1, id: 'job1'
@@ -54,22 +58,22 @@ describe Burst::Workflow do
 
   context 'model' do
     it 'default store' do
-      w = Burst::Workflow.new
+      w = Burstflow::Workflow.new
 
-      expect(w.attributes).to include(:id, jobs: {}, klass: Burst::Workflow.to_s)
+      expect(w.attributes).to include(:id, jobs: {}, klass: Burstflow::Workflow.to_s)
 
       expect(w.started?).to eq false
       expect(w.failed?).to eq false
       expect(w.finished?).to eq true
       expect(w.running?).to eq false
-      expect(w.status).to eq Burst::Workflow::FINISHED
+      expect(w.status).to eq Burstflow::Workflow::FINISHED
     end
 
     it 'store persistance' do
-      w = Burst::Workflow.new
+      w = Burstflow::Workflow.new
       w.save!
 
-      w2 = Burst::Workflow.find(w.id)
+      w2 = Burstflow::Workflow.find(w.id)
       expect(w2.attributes).to include(w.attributes)
     end
 
@@ -77,7 +81,7 @@ describe Burst::Workflow do
       w = W1.build
 
       jobs = w.jobs
-      expect_jobs(*jobs.values.map{|json| Burst::Job.new(w, json) })
+      expect_jobs(*jobs.values.map{|json| Burstflow::Job.new(w, json) })
 
       expect(w.attributes).to include(:id, jobs: jobs, klass: W1.to_s)
     end
@@ -87,9 +91,9 @@ describe Burst::Workflow do
       w.save!
 
       jobs = w.jobs
-      expect_jobs(*jobs.values.map{|json| Burst::Job.new(w, json) })
+      expect_jobs(*jobs.values.map{|json| Burstflow::Job.new(w, json) })
 
-      w2 = Burst::Workflow.find(w.id)
+      w2 = Burstflow::Workflow.find(w.id)
       expect(w2.attributes).to include(w.attributes)
     end
   end
@@ -144,12 +148,12 @@ describe Burst::Workflow do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq false
     expect(w.running?).to eq false
-    expect(w.status).to eq Burst::Workflow::INITIAL
+    expect(w.status).to eq Burstflow::Workflow::INITIAL
 
     w.start!
 
-    expect(Burst::Worker).to have_jobs(w.id, ['job1'])
-    expect(Burst::Worker).not_to have_jobs(w.id, ['job2'])
+    expect(Burstflow::Worker).to have_jobs(w.id, ['job1'])
+    expect(Burstflow::Worker).not_to have_jobs(w.id, ['job2'])
 
     w = W1.find(w.id)
 
@@ -157,7 +161,7 @@ describe Burst::Workflow do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq false
     expect(w.running?).to eq false
-    expect(w.status).to eq Burst::Workflow::INITIAL
+    expect(w.status).to eq Burstflow::Workflow::INITIAL
   end
 
   it 'start with perform' do
@@ -168,7 +172,7 @@ describe Burst::Workflow do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq false
     expect(w.running?).to eq false
-    expect(w.status).to eq Burst::Workflow::INITIAL
+    expect(w.status).to eq Burstflow::Workflow::INITIAL
 
     perform_enqueued_jobs do
       w.start!
@@ -180,6 +184,6 @@ describe Burst::Workflow do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq true
     expect(w.running?).to eq false
-    expect(w.status).to eq Burst::Workflow::FINISHED
+    expect(w.status).to eq Burstflow::Workflow::FINISHED
   end
 end

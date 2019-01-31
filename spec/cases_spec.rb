@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Burst::Manager do
+describe Burstflow::Manager do
   class JobHandler
 
     attr_accessor :jobs
@@ -30,7 +30,7 @@ describe Burst::Manager do
     end
   end
 
-  class TestCaseJob < Burst::Job
+  class TestCaseJob < Burstflow::Job
 
     def perform
       # puts "#{self.class.to_s}"
@@ -52,7 +52,7 @@ describe Burst::Manager do
 
   end
 
-  class CaseW1 < Burst::Workflow
+  class CaseW1 < Burstflow::Workflow
 
     configure do |*_args|
       id1 = run CaseJob1, id: 'job1', params: { p1: 1 }
@@ -76,7 +76,7 @@ describe Burst::Manager do
     expect(w.failed?).to eq false
     expect(w.finished?).to eq true
     expect(w.running?).to eq false
-    expect(w.status).to eq Burst::Workflow::FINISHED
+    expect(w.status).to eq Burstflow::Workflow::FINISHED
 
     expect($job_handler.jobs.count).to eq 3
     expect($job_handler.find_job(CaseJob1)).to include(output: 'CaseJob1', params: { p1: 1 })
@@ -89,7 +89,7 @@ describe Burst::Manager do
     expect($job_handler.find_job(CaseJob3)[:payloads]).to include(id: 'job2', class: 'CaseJob2', payload: 'CaseJob2')
   end
 
-  class CaseW2 < Burst::Workflow
+  class CaseW2 < Burstflow::Workflow
 
     configure do |*_args|
       id1 = run CaseJob1, id: 'job1', params: { p1: 1 }
@@ -113,12 +113,12 @@ describe Burst::Manager do
     expect(w.finished?).to eq false
     expect(w.running?).to eq true
     expect(w.suspended?).to eq true
-    expect(w.status).to eq Burst::Workflow::SUSPENDED
+    expect(w.status).to eq Burstflow::Workflow::SUSPENDED
 
     expect($job_handler.jobs.count).to eq 2
     expect($job_handler.find_job(CaseJob1)).to include(output: 'CaseJob1', params: { p1: 1 })
 
-    expect($job_handler.find_job(CaseAsyncJob)).to include(output: Burst::Job::SUSPEND, params: { p2: 2 })
+    expect($job_handler.find_job(CaseAsyncJob)).to include(output: Burstflow::Job::SUSPEND, params: { p2: 2 })
     expect($job_handler.find_job(CaseAsyncJob)[:payloads]).to include(id: 'job1', class: 'CaseJob1', payload: 'CaseJob1')
 
     w = CaseW2.find(w.id)
@@ -157,7 +157,7 @@ describe Burst::Manager do
     class DynJob2 < TestCaseJob; end
     class DynJob3 < TestCaseJob; end
 
-    class DynFlow1 < Burst::Workflow
+    class DynFlow1 < Burstflow::Workflow
 
       configure do |*_args|
         run DynJob1

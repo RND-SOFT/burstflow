@@ -1,10 +1,10 @@
 require 'spec_helper'
 
-describe Burst::Job do
-  let(:w) { Burst::Workflow.new }
+describe Burstflow::Job do
+  let(:w) { Burstflow::Workflow.new }
 
   context 'initializing' do
-    class TestJob1 < Burst::Job
+    class TestJob1 < Burstflow::Job
     end
 
     subject{ TestJob1.new(w, {}.with_indifferent_access) }

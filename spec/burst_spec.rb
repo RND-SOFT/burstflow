@@ -1,4 +1,4 @@
 require 'spec_helper'
 
-describe Burst do
+describe Burstflow do
 end

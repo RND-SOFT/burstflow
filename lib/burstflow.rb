@@ -11,16 +11,17 @@ require 'active_job'
 require 'pathname'
 require 'securerandom'
 
-require 'burst/configuration'
-require 'burst/model'
-require 'burst/builder'
-require 'burst/manager'
-require 'burst/job'
-require 'burst/workflow_helper'
-require 'burst/workflow'
-require 'burst/worker'
+require 'burstflow/configuration'
+require 'burstflow/model'
+require 'burstflow/helpers'
+require 'burstflow/helpers/builder'
+require 'burstflow/manager'
+require 'burstflow/job'
+require 'burstflow/workflow_helper'
+require 'burstflow/workflow'
+require 'burstflow/worker'
 
-module Burst
+module Burstflow
 
   def self.root
     Pathname.new(__FILE__).parent.parent

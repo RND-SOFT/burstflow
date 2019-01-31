@@ -1,4 +1,4 @@
-module Burst::Model
+module Burstflow::Model
 
   extend ActiveSupport::Concern
 

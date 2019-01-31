@@ -1,6 +1,5 @@
-class Burst::Workflow < ActiveRecord::Base
-
-  self.table_name_prefix = 'burst_'
+class Burstflow::Workflow < ActiveRecord::Base
+  self.table_name_prefix = 'burstflow_'
 
   INITIAL   = 'initial'.freeze
   RUNNING   = 'running'.freeze
@@ -8,8 +7,8 @@ class Burst::Workflow < ActiveRecord::Base
   FAILED    = 'failed'.freeze
   SUSPENDED = 'suspended'.freeze
 
-  include Burst::WorkflowHelper
-  include Burst::Builder
+  include Burstflow::WorkflowHelper
+  #include Burstflow::Builder
 
   attr_accessor :manager, :job_cache
   define_flow_attributes :jobs, :klass
@@ -23,7 +22,7 @@ class Burst::Workflow < ActiveRecord::Base
     self.jobs ||= {}.with_indifferent_access
     self.klass ||= self.class.to_s
 
-    @manager = Burst::Manager.new(self)
+    @manager = Burstflow::Manager.new(self)
   end
 
   def attributes
@@ -106,7 +105,7 @@ class Burst::Workflow < ActiveRecord::Base
     if job = @job_cache[id]
       job
     else
-      job = Burst::Job.from_hash(self, jobs[id].deep_dup)
+      job = Burstflow::Job.from_hash(self, jobs[id].deep_dup)
       @job_cache[job.id] = job
       job
     end
