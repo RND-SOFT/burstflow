@@ -2,7 +2,7 @@ class Burstflow::Job
 
   include Burstflow::Model
 
-  define_stored_attributes :id, :workflow_id, :klass, :params, :incoming, :outgoing, :payloads, :output
+  define_stored_attributes :id, :workflow_id, :klass, :params, :incoming, :outgoing, :payloads, :output, :error
   define_stored_attributes :enqueued_at, :started_at, :finished_at, :failed_at, :suspended_at, :resumed_at
 
   SUSPEND = 'suspend'.freeze
@@ -28,13 +28,13 @@ class Burstflow::Job
     assign_default_values(@workflow.get_job_hash(self.id))
   end
 
-  def save!
-    @workflow.with_lock do
-      @workflow.set_job(self)
-      @workflow.save!
-      yield if block_given?
-    end
-  end
+  # def save!
+  #   @workflow.with_lock do
+  #     @workflow.set_job(self)
+  #     @workflow.save!
+  #     yield if block_given?
+  #   end
+  # end
 
   def self.from_hash(workflow, hash_store)
     hash_store[:klass].constantize.new(workflow, hash_store)
@@ -90,7 +90,8 @@ class Burstflow::Job
       finished_at: finished_at,
       failed_at: failed_at,
       suspended_at: suspended_at,
-      resumed_at: resumed_at
+      resumed_at: resumed_at,
+      error: self.error
     }
   end
 
@@ -120,17 +121,18 @@ class Burstflow::Job
   end
 
   # mark job as failed when it is failed
-  def fail!
-    raise Error.new("Can't fail: already failed") if failed?
-    raise Error.new("Can't fail: already finished") if finished?
+  def fail! msg
+    #raise Error.new("Can't fail: already failed") if failed?
+    #raise Error.new("Can't fail: already finished") if finished?
     raise Error.new("Can't fail: not started") if !started?
     self.finished_at = self.failed_at = current_timestamp
+    self.error = msg
   end
 
   # mark job as suspended
   def suspend!
     raise Error.new("Can't suspend: already suspended") if suspended?
-    raise Error.new("Can't suspend: not runnig") if !runnig?
+    raise Error.new("Can't suspend: not runnig") if !running?
     self.suspended_at = current_timestamp
   end
 
@@ -155,6 +157,10 @@ class Burstflow::Job
 
   def running?
     started? && !finished? && !suspended?
+  end
+
+  def scheduled?
+    enqueued? && !finished? && !suspended?
   end
 
   def failed?
@@ -187,7 +193,7 @@ class Burstflow::Job
 
   def parents_succeeded?
     incoming.all? do |id|
-      @workflow.get_job(id).succeeded?
+      @workflow.job(id).succeeded?
     end
   end
 

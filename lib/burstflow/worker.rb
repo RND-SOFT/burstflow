@@ -6,37 +6,49 @@ class Burstflow::Worker < ::ActiveJob::Base
     job.payloads = incoming_payloads
 
     result = if resume_data.nil?
-               @manager.perform_job!(job)
-             else
-               @manager.perform_resume_job!(job, resume_data)
+      perform_job!(job)
+    else
+      resume_job!(job, resume_data)
     end
 
     @manager.job_performed!(job, result)
-  rescue StandardError => e
-    @manager.fail_job!(job)
-    raise e
+  rescue => e
+    @manager.fail_job!(job, e.message)
   end
 
+  def perform_job!(job)
+    job.start!
+    @manager.save_job!(job)
 
-  private
+    job.perform
+  end
 
-    attr_reader :workflow, :job
+  def resume_job!(job, data)
+    job.resume!
+    @manager.save_job!(job)
+    
+    job.resume(data)
+  end
 
-    def setup(workflow_id, job_id)
-      @workflow = Burstflow::Workflow.find(workflow_id)
-      @job = @workflow.get_job(job_id)
-      @manager = @workflow.manager
+private
+
+  attr_reader :workflow, :job
+
+  def setup(workflow_id, job_id)
+    @workflow = Burstflow::Workflow.find(workflow_id)
+    @job = @workflow.job(job_id)
+    @manager = @workflow.manager
+  end
+
+  def incoming_payloads
+    job.incoming.map do |job_id|
+      incoming = workflow.job(job_id)
+      {
+        id: incoming.id,
+        class: incoming.klass.to_s,
+        payload: incoming.output
+      }
     end
-
-    def incoming_payloads
-      job.incoming.map do |job_id|
-        incoming = workflow.get_job(job_id)
-        {
-          id: incoming.id,
-          class: incoming.klass.to_s,
-          payload: incoming.output
-        }
-      end
-    end
+  end
 
 end

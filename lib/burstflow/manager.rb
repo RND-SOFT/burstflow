@@ -6,9 +6,12 @@ class Burstflow::Manager
     @workflow = workflow
   end
 
-  def start
+  #workflow management
+
+  def start_workflow!
     workflow.with_lock do
-      raise 'Already started' unless workflow.initial?
+      workflow.mark_runnig
+      workflow.save!
 
       workflow.initial_jobs.each do |job|
         enqueue_job!(job)
@@ -16,54 +19,69 @@ class Burstflow::Manager
     end
   end
 
+  def resume_workflow! job_id, data
+    workflow.with_lock do
+      workflow.mark_resumed
+      workflow.save!
+
+      job = workflow.job(job_id)
+      resume_job!(job, data)
+    end
+  end
+
+
+  #job management
+
+  def save_job!(job)
+    workflow.with_lock do
+      workflow.set_job(job)
+      workflow.save!
+      yield(workflow, job) if block_given?
+    end
+  end
+
   #Mark job enqueued and enqueue it
   def enqueue_job!(job)
     job.enqueue!
-    job.save! do
+    save_job!(job) do
       Burstflow::Worker.perform_later(workflow.id, job.id)
     end
   end
 
-  #Mark job resumed and enqueue it
+  #Enqueue job for resuming
   def resume_job!(job, data)
-    job.resume!
-    job.save! do
+    Burstflow.logger.debug "[Burstflow] #{job.class}[#{job.id}] resumed"
+    save_job!(job) do
       Burstflow::Worker.perform_later(workflow.id, job.id, data)
     end
   end
 
-  #Mark job started and perform it
-  def perform_job!(job)
-    job.start!
-    job.save!
-
-    job.perform
-  end
-
-  #Perform job resuming
-  def perform_resume_job!(job, data)
-    job.resume(data)
-  end
 
   #Mark job suspended and forget it until resume
   def suspend_job!(job)
+    Burstflow.logger.debug "[Burstflow] #{job.class}[#{job.id}] suspended"
     job.suspend!
-    job.save!
+    save_job!(job) do
+      job_finished(job)
+    end
   end
 
 
   #Mark job finished and make further actions 
   def finish_job!(job)
+    Burstflow.logger.debug "[Burstflow] finished"
     job.finish!
-    job.save! do
+    save_job!(job) do
       job_finished(job)
     end
   end
 
   #Mark job failed and make further actions 
-  def fail_job!(job)
-    job.fail!
-    job.save! do
+  def fail_job!(job, message)
+    Burstflow.logger.error "[Burstflow] failed: #{message}"
+    job.fail! message
+    Burstflow.logger.error "[Burstflow] failed marked"
+    save_job!(job) do
       job_finished(job)
     end
   end
@@ -75,6 +93,10 @@ class Burstflow::Manager
     else
       finish_job!(job)
     end
+  rescue => e
+    Burstflow.logger.debug "[Burstflow] Workflow[#{workflow.id}] job_performed! failure: #{e.message}"
+    workflow.add_error(e.message)
+    workflow.save!
   end
 
 private
@@ -90,62 +112,43 @@ private
       return workflow_try_finish
     end
 
-    if job.has_outgoing_jobs?
+    if job.succeeded? && job.outgoing.any?
       return enqueue_outgoing_jobs(job)
     else
+      #job suspended or finished without outgoing jobs
       return workflow_try_finish
     end
   end
 
-  def workflow_finished
+  def workflow_finished_or_suspended
     if workflow.has_errors?
-      workflow.fail!
+      workflow.mark_failed
+    elsif workflow.has_suspended_jobs?
+      workflow.mark_suspended
     else
-      workflow.finish!
+      workflow.mark_finished
     end
   end
 
   #try finish workflow or skip untill jobs runnig
   def workflow_try_finish
-    if workflow.has_running_jobs?
+    if workflow.has_scheduled_jobs?
       #do nothing
-      #running jobs will perform finish action
+      #scheduled jobs will perform finish action
     else
-      workflow_finished
+      workflow_finished_or_suspended
     end
+
+    workflow.save!
   end
 
   #enqueue outgoing jobs if all requirements are met
   def enqueue_outgoing_jobs(job)
     job.outgoing.each do |job_id|
-      out = workflow.get_job(job_id)
+      out = workflow.job(job_id)
 
       enqueue_job!(out) if out.ready_to_start?
     end
   end
 
-end
-
-class Burstflow::Manager
-
-
-
-
-
-
-
-end
-
-def status
-  if failed?
-    FAILED
-  elsif suspended?
-    SUSPENDED
-  elsif running?
-    RUNNING
-  elsif finished?
-    FINISHED
-  else
-    INITIAL
-  end
 end

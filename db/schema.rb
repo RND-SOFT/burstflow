@@ -17,9 +17,11 @@ ActiveRecord::Schema.define(version: 2018_01_01_000001) do
   enable_extension "plpgsql"
 
   create_table "burstflow_workflows", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "status"
     t.jsonb "flow", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["status"], name: "index_burstflow_workflows_on_status"
   end
 
 end

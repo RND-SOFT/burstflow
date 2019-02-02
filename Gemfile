@@ -13,4 +13,5 @@ group :test do
   gem 'database_cleaner'
   gem 'otr-activerecord'
   gem 'pg', '~> 0.21.0'
+  gem 'awesome_print'
 end

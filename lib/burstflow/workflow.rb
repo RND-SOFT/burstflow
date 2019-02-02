@@ -1,4 +1,7 @@
 class Burstflow::Workflow < ActiveRecord::Base
+  require 'burstflow/workflow/builder'
+  require 'burstflow/workflow/configuration'
+  
   self.table_name_prefix = 'burstflow_'
 
   INITIAL   = 'initial'.freeze
@@ -7,20 +10,21 @@ class Burstflow::Workflow < ActiveRecord::Base
   FAILED    = 'failed'.freeze
   SUSPENDED = 'suspended'.freeze
 
+  include Burstflow::Workflow::Configuration
   include Burstflow::WorkflowHelper
   #include Burstflow::Builder
 
-  attr_accessor :manager, :job_cache
-  define_flow_attributes :jobs, :klass
+  attr_accessor :manager, :cache
+  define_flow_attributes :jobs_config, :failures, :klass
 
   after_initialize do
-    initialize_builder
+    @cache = {}
 
-    @job_cache = {}
-
+    self.status ||= INITIAL
     self.id ||= SecureRandom.uuid
-    self.jobs ||= {}.with_indifferent_access
+    self.jobs_config ||= {}.with_indifferent_access
     self.klass ||= self.class.to_s
+    self.failures ||= []
 
     @manager = Burstflow::Manager.new(self)
   end
@@ -28,120 +32,133 @@ class Burstflow::Workflow < ActiveRecord::Base
   def attributes
     {
       id: self.id,
-      jobs: self.jobs,
+      jobs_config: self.jobs_config,
       klass: self.klass,
-      status: status
+      status: status,
+      failures: failures
     }
   end
 
   def self.build(*args)
-    wf = new
-    wf.configure(*args)
-    wf.resolve_dependencies
-    wf
+    new.tap do |wf|
+      builder = Burstflow::Workflow::Builder.new(wf, *args, &configuration)
+      wf.flow = {jobs_config: builder.as_json}
+    end
   end
 
   def reload(options = nil)
-    self.job_cache = {}
+    self.cache = {}
     super
   end
 
   def start!
-    save!
-    manager.start
+    manager.start_workflow!
+    self
   end
 
   def resume!(job_id, data)
-    manager.resume!(get_job(job_id), data)
+    manager.resume_workflow!(job_id, data)
+    self
   end
 
-  def status
-    if failed?
-      FAILED
-    elsif suspended?
-      SUSPENDED
-    elsif running?
-      RUNNING
-    elsif finished?
-      FINISHED
-    else
-      INITIAL
+  def jobs
+    Enumerator.new do |y|
+      jobs_config.keys.each do |id|
+        y << job(id)
+      end
     end
   end
+
+  def job(id)
+    Burstflow::Job.from_hash(self, jobs_config[id].deep_dup)
+  end
+
+  def set_job(job)
+    jobs_config[job.id] = job.as_json
+  end
+
+  def initial_jobs
+    cache[:initial_jobs] ||= jobs.select(&:initial?)
+  end
+
+  def add_error job_or_message
+    if job_or_message.is_a? Burstflow::Job
+      failures.push(job: job_or_message.id, msg: job_or_message.error.to_s || 'unknown', created_at: Time.now)
+    else
+      failures.push(job: nil, msg: job_or_message.to_s, created_at: Time.now)
+    end
+  end
+
+  def has_errors?
+    failures.any?
+  end
+
+  def has_scheduled_jobs?
+    cache[:has_scheduled_jobs] ||= jobs.any? do |job|
+      job.scheduled? || (job.initial? && !job.enqueued?)
+    end
+  end
+
+  def has_suspended_jobs?
+    cache[:has_suspended_jobs] ||= jobs.any?(&:suspended?)
+  end
+
 
   def initial?
     status == INITIAL
   end
 
   def finished?
-    all_jobs.all?(&:finished?)
-  end
-
-  def started?
-    !!started_at
-  end
-
-  def running?
-    started? && !finished?
+    status == FINISHED
   end
 
   def failed?
-    all_jobs.any?(&:failed?)
+    status == FAILED
+  end
+
+  def running?
+    status == RUNNING
   end
 
   def suspended?
-    !failed? && all_jobs.any?(&:suspended?)
+    status == SUSPENDED
   end
 
-  def all_jobs
-    Enumerator.new do |y|
-      jobs.keys.each do |id|
-        y << get_job(id)
-      end
-    end
+
+  def mark_runnig
+    raise "Can't start: workflow already running" if (running? || suspended?)
+    raise "Can't start: workflow already failed" if failed?
+    raise "Can't start: workflow already finished" if finished?
+    self.status = RUNNING
   end
 
-  def get_job(id)
-    if job = @job_cache[id]
-      job
-    else
-      job = Burstflow::Job.from_hash(self, jobs[id].deep_dup)
-      @job_cache[job.id] = job
-      job
-    end
+  def mark_failed
+    raise "Can't fail: workflow already failed" if failed?
+    raise "Can't fail: workflow already finished" if finished?
+    raise "Can't fail: workflow in not runnig" if !(running? || suspended?)
+    self.status = FAILED
   end
 
-  def set_job(job)
-    jobs[job.id] = job.as_json
+  def mark_finished
+    raise "Can't finish: workflow already finished" if finished?
+    raise "Can't finish: workflow already failed" if failed?
+    raise "Can't finish: workflow in not runnig" if !running?
+    self.status = FINISHED
   end
 
-  def initial_jobs
-    all_jobs.select(&:initial?)
+  def mark_suspended
+    raise "Can't suspend: workflow already finished" if finished?
+    raise "Can't suspend: workflow already failed" if failed?
+    raise "Can't suspend: workflow in not runnig" if !running?
+    self.status = SUSPENDED
   end
 
-  def find_job(id_or_klass)
-    id = if jobs.key?(id_or_klass)
-           id_or_klass
-         else
-           find_id_by_klass(id_or_klass)
-    end
-
-    get_job(id)
+  def mark_resumed
+    raise "Can't resume: workflow already running" if running?
+    raise "Can't resume: workflow already finished" if finished?
+    raise "Can't resume: workflow already failed" if failed?
+    raise "Can't resume: workflow in not suspended" if !suspended?
+    self.status = RUNNING
   end
-
-  def get_job_hash(id)
-    jobs[id]
-  end
-
-  private
-
-    def find_id_by_klass(klass)
-      finded = jobs.select do |_, job|
-        job[:klass].to_s == klass.to_s
-      end
-
-      raise 'Duplicat job detected' if finded.count > 1
-      finded.first.second[:id]
-    end
 
 end

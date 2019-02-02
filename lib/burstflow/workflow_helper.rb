@@ -35,9 +35,9 @@ module Burstflow::WorkflowHelper
       last_job&.finished_at
     end
 
-    def configure(*args)
-      instance_exec *args, &self.class.configuration
-    end
+    # def configure(*args)
+    #   instance_exec *args, &self.class.configuration
+    # end
   end
 
   class_methods do
@@ -63,24 +63,3 @@ module Burstflow::WorkflowHelper
   end
 
 end
-
-
-# class Test
-#   def self.configure &block
-#     @c = block
-#   end
-
-#   def self.c
-#     @c
-#   end
-
-#   def go
-#     puts "111111"
-#   end
-
-#   def run
-#     instance_eval &Test.c
-#   end
-
-
-# end

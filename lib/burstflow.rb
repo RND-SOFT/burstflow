@@ -13,18 +13,22 @@ require 'securerandom'
 
 require 'burstflow/configuration'
 require 'burstflow/model'
-require 'burstflow/helpers'
-require 'burstflow/helpers/builder'
-require 'burstflow/manager'
-require 'burstflow/job'
 require 'burstflow/workflow_helper'
 require 'burstflow/workflow'
+require 'burstflow/manager'
+require 'burstflow/job'
+
+
 require 'burstflow/worker'
 
 module Burstflow
 
   def self.root
     Pathname.new(__FILE__).parent.parent
+  end
+
+  def self.logger
+    ActiveJob::Base.logger
   end
 
   def self.configuration
