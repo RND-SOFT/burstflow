@@ -16,6 +16,7 @@ require 'burstflow/workflow_helper'
 require 'burstflow/workflow'
 require 'burstflow/manager'
 require 'burstflow/job'
+require 'generators/burstflow/install/install_generator'
 
 
 require 'burstflow/worker'

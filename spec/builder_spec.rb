@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'pp'
 
 describe Burstflow::Workflow::Builder do
   context 'initializing' do
