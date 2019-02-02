@@ -1,12 +1,10 @@
-module Burstflow::Model
+module Burstflow::Job::Model
 
   extend ActiveSupport::Concern
 
   included do |klass|
-    klass.include ActiveModel::Model
     klass.include ActiveModel::Dirty
     klass.include ActiveModel::Serialization
-    klass.extend ActiveModel::Callbacks
 
     attr_accessor :model
 

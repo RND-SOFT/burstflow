@@ -73,7 +73,7 @@ describe Burstflow::Workflow do
   describe "executing" do
 
     def perform_enqueued_job wf, enqueued_job
-      enqueued_job[:job].new.perform(*enqueued_job[:args])
+      enqueued_job[:job].new(*enqueued_job[:args]).perform_now
 
       queue_adapter.performed_jobs << enqueued_job
       queue_adapter.enqueued_jobs.delete(enqueued_job)
@@ -94,7 +94,7 @@ describe Burstflow::Workflow do
 
         threads = jobs.map do |job|
           Thread.new(job) do |job|
-            job[:job].new.perform(*job[:args])
+            job[:job].new(*job[:args]).perform_now
             queue_adapter.performed_jobs << job
           end
         end
@@ -253,12 +253,13 @@ describe Burstflow::Workflow do
           end.reload
 
           expect(wf.status).to eq Burstflow::Workflow::FAILED
-          expect(wf.failures.first).to include(job: $jobid2, msg: 'ex')
+          expect(wf.failures.first).to include(:created_at, job: $jobid2)
 
           expect(wf.job($jobid1).succeeded?).to eq true
 
           expect(wf.job($jobid2).succeeded?).to eq false
           expect(wf.job($jobid2).failed?).to eq true
+          expect(wf.job($jobid2).failure).to include(klass: 'RuntimeError', message: 'ex')
 
           expect(wf.job($jobid3).enqueued?).to eq false
         end
@@ -338,6 +339,56 @@ describe Burstflow::Workflow do
           expect(wf.job($lasjobid).output).to eq expected_result
         end
 
+      end
+
+      describe "callbacks" do
+
+        WfCallJob = Class.new(Burstflow::Job) do
+          before_perform :bp
+          before_suspend :bs
+          before_resume  :br
+          before_failure :bf
+
+          def bp;$bp = true;end
+          def bs;$bs = true;end
+          def br;$br = true;end
+          def bf;$bf = true;end
+
+          def perform
+            suspend()
+          end
+
+          def resume data
+            raise "ex"
+          end
+        end
+  
+        class WorkflowCall < Burstflow::Workflow
+          configure do
+            $jobid1 = run WfCallJob
+          end
+        end
+
+        it "run" do
+          expect([$bp, $bs, $br, $bf].any?).to eq false
+
+          wf = perform_enqueued_jobs do
+            WorkflowCall.build.start!
+          end.reload
+
+          wf = perform_enqueued_jobs do
+            wf.resume!($jobid1, '123123123')
+          end.reload
+
+          expect(wf.status).to eq Burstflow::Workflow::FAILED
+          expect(wf.failures.first).to include(:created_at, job: $jobid1)
+
+          expect(wf.job($jobid1).succeeded?).to eq false
+          expect(wf.job($jobid1).failed?).to eq true
+          expect(wf.job($jobid1).failure).to include(klass: 'RuntimeError', message: 'ex')
+
+          expect([$bp, $bs, $br, $bf].all?).to eq true
+        end
       end
 
 

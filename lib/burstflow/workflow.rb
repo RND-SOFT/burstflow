@@ -1,4 +1,5 @@
 class Burstflow::Workflow < ActiveRecord::Base
+  require 'burstflow/workflow/exception'
   require 'burstflow/workflow/builder'
   require 'burstflow/workflow/configuration'
   
@@ -93,19 +94,20 @@ class Burstflow::Workflow < ActiveRecord::Base
     cache[:initial_jobs] ||= jobs.select(&:initial?)
   end
 
-  def add_error job_or_message, exception = nil
-    context = {}
-    if exception
-      context[:message] = exception.message
-      context[:klass] = exception.class.to_s
-      context[:backtrace] = exception.backtrace.first(10)
+  def add_error job_orexception
+    context = {
+      created_at: Time.now.to_i
+    }
+    if job_orexception.is_a?(::Exception)
+      context[:message]     = job_orexception.message
+      context[:klass]       = job_orexception.class.to_s
+      context[:backtrace]   = job_orexception.backtrace.first(10)
+      context[:cause]       = job_orexception.cause
+    else
+      context[:job] = job_orexception.id
     end
 
-    if job_or_message.is_a? Burstflow::Job
-      failures.push(context: context, job: job_or_message.id, msg: job_or_message.error.to_s || 'unknown', created_at: Time.now)
-    else
-      failures.push(context: context, job: nil, msg: job_or_message.to_s, created_at: Time.now)
-    end
+    failures.push(context)
   end
 
   def has_errors?
@@ -134,42 +136,42 @@ class Burstflow::Workflow < ActiveRecord::Base
 
 
   def runnig!
-    raise "Can't start: workflow already running" if (running? || suspended?)
-    raise "Can't start: workflow already failed" if failed?
-    raise "Can't start: workflow already finished" if finished?
+    raise InternalError.new(self, "Can't start: workflow already running") if (running? || suspended?)
+    raise InternalError.new(self, "Can't start: workflow already failed") if failed?
+    raise InternalError.new(self, "Can't start: workflow already finished") if finished?
     self.status = RUNNING
     save!
   end
 
   def failed!
-    raise "Can't fail: workflow already failed" if failed?
-    raise "Can't fail: workflow already finished" if finished?
-    raise "Can't fail: workflow in not runnig" if !(running? || suspended?)
+    raise InternalError.new(self, "Can't fail: workflow already failed") if failed?
+    raise InternalError.new(self, "Can't fail: workflow already finished") if finished?
+    raise InternalError.new(self, "Can't fail: workflow in not runnig") if !(running? || suspended?)
     self.status = FAILED
     save!
   end
 
   def finished!
-    raise "Can't finish: workflow already finished" if finished?
-    raise "Can't finish: workflow already failed" if failed?
-    raise "Can't finish: workflow in not runnig" if !running?
+    raise InternalError.new(self, "Can't finish: workflow already finished") if finished?
+    raise InternalError.new(self, "Can't finish: workflow already failed") if failed?
+    raise InternalError.new(self, "Can't finish: workflow in not runnig") if !running?
     self.status = FINISHED
     save!
   end
 
   def suspended!
-    raise "Can't suspend: workflow already finished" if finished?
-    raise "Can't suspend: workflow already failed" if failed?
-    raise "Can't suspend: workflow in not runnig" if !running?
+    raise InternalError.new(self, "Can't suspend: workflow already finished") if finished?
+    raise InternalError.new(self, "Can't suspend: workflow already failed") if failed?
+    raise InternalError.new(self, "Can't suspend: workflow in not runnig") if !running?
     self.status = SUSPENDED
     save!
   end
 
   def resumed!
-    raise "Can't resume: workflow already running" if running?
-    raise "Can't resume: workflow already finished" if finished?
-    raise "Can't resume: workflow already failed" if failed?
-    raise "Can't resume: workflow in not suspended" if !suspended?
+    raise InternalError.new(self, "Can't resume: workflow already running") if running?
+    raise InternalError.new(self, "Can't resume: workflow already finished") if finished?
+    raise InternalError.new(self, "Can't resume: workflow already failed") if failed?
+    raise InternalError.new(self, "Can't resume: workflow in not suspended") if !suspended?
     self.status = RUNNING
     save!
   end

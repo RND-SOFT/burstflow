@@ -46,9 +46,11 @@ class Burstflow::Manager
 
   #Mark job suspended and forget it until resume
   def suspend_job!(job)
-    job.suspend!
-    job.save! do
-      analyze_workflow_state(job)
+    job.run_callbacks :suspend do
+      job.suspend!
+      job.save! do
+        analyze_workflow_state(job)
+      end
     end
   end
 
@@ -62,14 +64,16 @@ class Burstflow::Manager
   end
 
   #Mark job failed and make further actions 
-  def fail_job!(job, message, exception = nil)
-    job.fail! message
-    workflow.add_error(job, exception)
-    workflow.save!
+  def fail_job!(job, exception)
+    job.run_callbacks :failure do
+      job.fail! exception
+      workflow.add_error(job)
+      workflow.save!
 
-    job.save! do
-      analyze_workflow_state(job)
-    end
+      job.save! do
+        analyze_workflow_state(job)
+      end
+    end    
   end
 
   #Mark job finished or suspended depends on result or output
@@ -80,9 +84,7 @@ class Burstflow::Manager
       finish_job!(job)
     end
   rescue => e
-    Burstflow.logger.debug "[Burstflow] Workflow[#{workflow.id}] job_performed! failure: #{e.message}"
-    workflow.add_error(e.message)
-    workflow.save!
+    raise Burstflow::Workflow::InternalError.new(workflow, e.message)
   end
 
 private
@@ -90,7 +92,7 @@ private
   #analyze job completition, current workflow state and perform futher actions
   def analyze_workflow_state job
     unless ActiveRecord::Base.connection.open_transactions > 0
-      raise "analyze_workflow_state must be called in transaction with lock!"
+      raise Burstflow::Workflow::InternalError.new(workflow, "analyze_workflow_state must be called in transaction with lock!")
     end
 
     if job.succeeded? && job.outgoing.any? && !workflow.has_errors?

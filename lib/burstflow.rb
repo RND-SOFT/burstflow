@@ -12,7 +12,6 @@ require 'pathname'
 require 'securerandom'
 
 require 'burstflow/configuration'
-require 'burstflow/model'
 require 'burstflow/workflow_helper'
 require 'burstflow/workflow'
 require 'burstflow/manager'
