@@ -5,7 +5,7 @@ module Burstflow::Job::State
 
     # mark job as enqueued when it is scheduled to queue
     def enqueue!
-      raise InternalError.new(self, "Can't enqueue: already enqueued") if enqueued?
+      raise Burstflow::Job::InternalError.new(self, "Can't enqueue: already enqueued") if enqueued?
       self.enqueued_at = current_timestamp
       self.started_at = nil
       self.finished_at = nil
@@ -16,23 +16,23 @@ module Burstflow::Job::State
 
     # mark job as started when it is start performing
     def start!
-      raise InternalError.new(self, "Can't start: already started") if started?
-      raise InternalError.new(self, "Can't start: not enqueued") if !enqueued?
+      raise Burstflow::Job::InternalError.new(self, "Can't start: already started") if started?
+      raise Burstflow::Job::InternalError.new(self, "Can't start: not enqueued") if !enqueued?
       self.started_at = current_timestamp
     end
 
     # mark job as finished when it is finish performing
     def finish!
-      raise InternalError.new(self, "Can't finish: already finished") if finished?
-      raise InternalError.new(self, "Can't finish: not started") if !started?
+      raise Burstflow::Job::InternalError.new(self, "Can't finish: already finished") if finished?
+      raise Burstflow::Job::InternalError.new(self, "Can't finish: not started") if !started?
       self.finished_at = current_timestamp
     end
 
     # mark job as failed when it is failed
     def fail! msg_or_exception
-      #raise InternalError.new(self, "Can't fail: already failed") if failed?
-      #raise InternalError.new(self, Can't fail: already finished") if finished?
-      raise InternalError.new(self, "Can't fail: not started") if !started?
+      #raise Burstflow::Job::InternalError.new(self, "Can't fail: already failed") if failed?
+      #raise Burstflow::Job::InternalError.new(self, Can't fail: already finished") if finished?
+      raise Burstflow::Job::InternalError.new(self, "Can't fail: not started") if !started?
       self.finished_at = self.failed_at = current_timestamp
 
       context = {}
@@ -50,15 +50,15 @@ module Burstflow::Job::State
 
     # mark job as suspended
     def suspend!
-      raise InternalError.new(self, "Can't suspend: already suspended") if suspended?
-      raise InternalError.new(self, "Can't suspend: not runnig") if !running?
+      raise Burstflow::Job::InternalError.new(self, "Can't suspend: already suspended") if suspended?
+      raise Burstflow::Job::InternalError.new(self, "Can't suspend: not runnig") if !running?
       self.suspended_at = current_timestamp
     end
 
     # mark job as resumed
     def resume!
-      raise InternalError.new(self, "Can't resume: already resumed") if resumed?
-      raise InternalError.new(self, "Can't resume: not suspended") if !suspended?
+      raise Burstflow::Job::InternalError.new(self, "Can't resume: already resumed") if resumed?
+      raise Burstflow::Job::InternalError.new(self, "Can't resume: not suspended") if !suspended?
       self.resumed_at = current_timestamp
     end
 
