@@ -344,11 +344,13 @@ describe Burstflow::Workflow do
       describe "callbacks" do
 
         WfCallJob = Class.new(Burstflow::Job) do
+          before_enqueue :be
           before_perform :bp
           before_suspend :bs
           before_resume  :br
           before_failure :bf
 
+          def be;$be = true;end
           def bp;$bp = true;end
           def bs;$bs = true;end
           def br;$br = true;end
@@ -364,13 +366,22 @@ describe Burstflow::Workflow do
         end
   
         class WorkflowCall < Burstflow::Workflow
+          before_suspend :wbs
+          before_resume  :wbr
+          before_failure :wbf
+
+          def wbs;$wbs = true;end
+          def wbr;$wbr = true;end
+          def wbf;$wbf = true;end
+
           configure do
             $jobid1 = run WfCallJob
           end
         end
 
         it "run" do
-          expect([$bp, $bs, $br, $bf].any?).to eq false
+          expect([$be, $bp, $bs, $br, $bf].any?).to eq false
+          expect([$wbs, $wbr, $wbf].any?).to eq false
 
           wf = perform_enqueued_jobs do
             WorkflowCall.build.start!
@@ -387,7 +398,8 @@ describe Burstflow::Workflow do
           expect(wf.job($jobid1).failed?).to eq true
           expect(wf.job($jobid1).failure).to include(klass: 'RuntimeError', message: 'ex')
 
-          expect([$bp, $bs, $br, $bf].all?).to eq true
+          expect([$be, $bp, $bs, $br, $bf].all?).to eq true
+          expect([$wbs, $wbr, $wbf].all?).to eq true
         end
       end
 
@@ -400,7 +412,7 @@ describe Burstflow::Workflow do
     it 'default store' do
       w = Burstflow::Workflow.new
 
-      expect(w.attributes).to include(:id, jobs_config: {}, klass: Burstflow::Workflow.to_s)
+      expect(w.attributes).to include(:id, jobs_config: {}, type: Burstflow::Workflow.to_s)
 
       expect(w.initial?).to eq true
       expect(w.failed?).to eq false

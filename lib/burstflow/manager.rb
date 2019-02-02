@@ -30,9 +30,11 @@ class Burstflow::Manager
 
   #Mark job enqueued and enqueue it
   def enqueue_job!(job)
-    job.enqueue!
-    job.save! do
-      Burstflow::Worker.perform_later(workflow.id, job.id)
+    job.run_callbacks :enqueue do
+      job.enqueue!
+      job.save! do
+        Burstflow::Worker.perform_later(workflow.id, job.id)
+      end
     end
   end
 
