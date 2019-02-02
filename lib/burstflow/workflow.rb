@@ -10,6 +10,8 @@ class Burstflow::Workflow < ActiveRecord::Base
   FAILED    = 'failed'.freeze
   SUSPENDED = 'suspended'.freeze
 
+  STATUSES = [INITIAL, RUNNING, FINISHED, FAILED, SUSPENDED].freeze
+
   include Burstflow::Workflow::Configuration
   include Burstflow::WorkflowHelper
   #include Burstflow::Builder
@@ -29,6 +31,12 @@ class Burstflow::Workflow < ActiveRecord::Base
     @manager = Burstflow::Manager.new(self)
   end
 
+  STATUSES.each do |name|
+    define_method "#{name}?".to_sym do
+      self.status == name
+    end
+  end
+
   def attributes
     {
       id: self.id,
@@ -42,11 +50,11 @@ class Burstflow::Workflow < ActiveRecord::Base
   def self.build(*args)
     new.tap do |wf|
       builder = Burstflow::Workflow::Builder.new(wf, *args, &configuration)
-      wf.flow = {jobs_config: builder.as_json}
+      wf.flow = {'jobs_config' => builder.as_json}
     end
   end
 
-  def reload(options = nil)
+  def reload(*)
     self.cache = {}
     super
   end
@@ -69,8 +77,12 @@ class Burstflow::Workflow < ActiveRecord::Base
     end
   end
 
+  def job_hash(id)
+    jobs_config[id].deep_dup
+  end
+
   def job(id)
-    Burstflow::Job.from_hash(self, jobs_config[id].deep_dup)
+    Burstflow::Job.from_hash(self, job_hash(id))
   end
 
   def set_job(job)
@@ -81,11 +93,18 @@ class Burstflow::Workflow < ActiveRecord::Base
     cache[:initial_jobs] ||= jobs.select(&:initial?)
   end
 
-  def add_error job_or_message
+  def add_error job_or_message, exception = nil
+    context = {}
+    if exception
+      context[:message] = exception.message
+      context[:klass] = exception.class.to_s
+      context[:backtrace] = exception.backtrace.first(10)
+    end
+
     if job_or_message.is_a? Burstflow::Job
-      failures.push(job: job_or_message.id, msg: job_or_message.error.to_s || 'unknown', created_at: Time.now)
+      failures.push(context: context, job: job_or_message.id, msg: job_or_message.error.to_s || 'unknown', created_at: Time.now)
     else
-      failures.push(job: nil, msg: job_or_message.to_s, created_at: Time.now)
+      failures.push(context: context, job: nil, msg: job_or_message.to_s, created_at: Time.now)
     end
   end
 
@@ -103,62 +122,56 @@ class Burstflow::Workflow < ActiveRecord::Base
     cache[:has_suspended_jobs] ||= jobs.any?(&:suspended?)
   end
 
-
-  def initial?
-    status == INITIAL
-  end
-
-  def finished?
-    status == FINISHED
-  end
-
-  def failed?
-    status == FAILED
-  end
-
-  def running?
-    status == RUNNING
-  end
-
-  def suspended?
-    status == SUSPENDED
+  def complete!
+    if has_errors?
+      failed!
+    elsif has_suspended_jobs?
+      suspended!
+    else
+      finished!
+    end
   end
 
 
-  def mark_runnig
+  def runnig!
     raise "Can't start: workflow already running" if (running? || suspended?)
     raise "Can't start: workflow already failed" if failed?
     raise "Can't start: workflow already finished" if finished?
     self.status = RUNNING
+    save!
   end
 
-  def mark_failed
+  def failed!
     raise "Can't fail: workflow already failed" if failed?
     raise "Can't fail: workflow already finished" if finished?
     raise "Can't fail: workflow in not runnig" if !(running? || suspended?)
     self.status = FAILED
+    save!
   end
 
-  def mark_finished
+  def finished!
     raise "Can't finish: workflow already finished" if finished?
     raise "Can't finish: workflow already failed" if failed?
     raise "Can't finish: workflow in not runnig" if !running?
     self.status = FINISHED
+    save!
   end
 
-  def mark_suspended
+  def suspended!
     raise "Can't suspend: workflow already finished" if finished?
     raise "Can't suspend: workflow already failed" if failed?
     raise "Can't suspend: workflow in not runnig" if !running?
     self.status = SUSPENDED
+    save!
   end
 
-  def mark_resumed
+  def resumed!
     raise "Can't resume: workflow already running" if running?
     raise "Can't resume: workflow already finished" if finished?
     raise "Can't resume: workflow already failed" if failed?
     raise "Can't resume: workflow in not suspended" if !suspended?
     self.status = RUNNING
+    save!
   end
 
 end

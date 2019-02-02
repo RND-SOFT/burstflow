@@ -7,6 +7,23 @@ class Workflow::Builder
     @jobs_by_class = {}
     @jobs_by_id = {}
 
+    @workflow.jobs_config.each_pair do |id, job_hash|
+      job = Burstflow::Job.from_hash(@workflow, job_hash)
+
+      @jobs_by_class[job.klass.to_s] ||= []
+      @jobs_by_class[job.klass.to_s] << job
+      @jobs_by_id[id] = job
+      job.incoming.each do |from|
+        @deps << { from: from, to: id }
+      end
+
+      job.outgoing.each do |to|
+        @deps << { from: id, to: to }
+      end
+
+      @deps.uniq!
+    end
+
     instance_exec *args, &block
     resolve_dependencies
   end

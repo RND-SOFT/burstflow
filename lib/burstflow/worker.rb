@@ -13,19 +13,19 @@ class Burstflow::Worker < ::ActiveJob::Base
 
     @manager.job_performed!(job, result)
   rescue => e
-    @manager.fail_job!(job, e.message)
+    @manager.fail_job!(job, e.message, e)
   end
 
   def perform_job!(job)
     job.start!
-    @manager.save_job!(job)
+    job.save!
 
     job.perform
   end
 
   def resume_job!(job, data)
     job.resume!
-    @manager.save_job!(job)
+    job.save!
     
     job.resume(data)
   end
@@ -46,7 +46,7 @@ private
       {
         id: incoming.id,
         class: incoming.klass.to_s,
-        payload: incoming.output
+        value: incoming.output
       }
     end
   end

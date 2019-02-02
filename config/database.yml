@@ -4,12 +4,13 @@ development: &base
   port:     <%= ENV['DATABASE_PORT'] || 5432 %>
   encoding: unicode
   database: <%= ENV['DATABASE_NAME'] || 'burst_test' %>
-  pool:     4
+  pool:     150
   username: <%= ENV['DATABASE_USER'] || 'postgres' %>
   password: <%= ENV['DATABASE_PASS'] || '' %>
 
 test:
- <<: *base
+  <<: *base
+
 
 production:
  <<: *base
