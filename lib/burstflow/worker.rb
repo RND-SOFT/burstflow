@@ -1,3 +1,5 @@
+require 'active_job'
+
 class Burstflow::Worker < ::ActiveJob::Base
 
   attr_reader :workflow, :job

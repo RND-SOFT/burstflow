@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    burstflow (0.1.1)
+    burstflow (0.2.0)
       activejob
       activerecord
 
@@ -116,4 +116,4 @@ DEPENDENCIES
   yajl-ruby
 
 BUNDLED WITH
-   1.16.0
+   1.17.2

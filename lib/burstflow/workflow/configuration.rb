@@ -3,7 +3,23 @@ module Burstflow
 module Workflow::Configuration
   extend ActiveSupport::Concern
 
+  class JSONBWithIndifferentAccess
+
+    def self.dump(hash)
+      hash.as_json
+    end
+
+    def self.load(hash)
+      hash ||= {}
+      hash = JSON.parse(hash) if hash.is_a? String
+      hash.with_indifferent_access
+    end
+
+  end
+
   included do |_klass|
+    serialize :flow, JSONBWithIndifferentAccess
+    
     def configure(*args)
       builder = Builder.new()
       builder.instance_exec *args, &self.class.configuration

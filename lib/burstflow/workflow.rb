@@ -1,4 +1,9 @@
-class Burstflow::Workflow < ActiveRecord::Base
+require 'active_record'
+
+require 'burstflow/manager'
+
+module Burstflow
+class Workflow < ActiveRecord::Base
   require 'burstflow/workflow/exception'
   require 'burstflow/workflow/builder'
   require 'burstflow/workflow/configuration'
@@ -16,8 +21,6 @@ class Burstflow::Workflow < ActiveRecord::Base
 
   include Burstflow::Workflow::Configuration
   include Burstflow::Workflow::Callbacks
-  include Burstflow::WorkflowHelper
-  #include Burstflow::Builder
 
   attr_accessor :manager, :cache
   define_flow_attributes :jobs_config, :failures
@@ -135,6 +138,21 @@ class Burstflow::Workflow < ActiveRecord::Base
     end
   end
 
+  def first_job
+    all_jobs.min_by{|n| n.started_at || Time.now.to_i }
+  end
+
+  def last_job
+    all_jobs.max_by{|n| n.finished_at || 0 } if finished?
+  end
+
+  def started_at
+    first_job&.started_at
+  end
+
+  def finished_at
+    last_job&.finished_at
+  end
 
   def runnig!
     raise InternalError.new(self, "Can't start: workflow already running") if (running? || suspended?)
@@ -185,4 +203,5 @@ class Burstflow::Workflow < ActiveRecord::Base
     end
   end
 
+end
 end

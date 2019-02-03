@@ -2,6 +2,8 @@ require 'spec_helper'
 require "generator_spec"
 require 'tmpdir'
 
+require 'generators/burstflow/install/install_generator'
+
 module Burstflow
   module Generators
     describe InstallGenerator, type: :generator do

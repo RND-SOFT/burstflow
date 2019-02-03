@@ -1,9 +1,11 @@
-lib = File.expand_path('lib', __dir__)
-$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+$:.push File.expand_path("lib", __dir__)
+
+# Maintain your gem's version:
+require "burstflow/version"
 
 Gem::Specification.new do |spec|
   spec.name          = 'burstflow'
-  spec.version       = '0.1.1'
+  spec.version       = Burstflow::VERSION
   spec.authors       = ['Samoilenko Yuri']
   spec.email         = ['kinnalru@gmail.com']
   spec.summary       = 'Burstflow is a parallel workflow runner using ActiveRecord and ActiveJob'

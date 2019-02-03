@@ -15,7 +15,7 @@ module Burstflow
 
       def copy_migrations
         migration_template "create_workflow.rb",
-          "db/migrate/create_create_workflow.rb"
+          "db/migrate/create_workflow.rb"
       end
     end
   end

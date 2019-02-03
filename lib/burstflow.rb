@@ -1,42 +1,11 @@
-require 'rubygems'
-require 'bundler'
-require 'bundler/setup'
-Bundler.require(:default)
+require 'burstflow/railtie' if defined?(Rails)
 
 require 'active_support/all'
-require 'active_support/dependencies'
-require 'active_record'
-require 'active_job'
 
-require 'pathname'
-require 'securerandom'
-
-require 'burstflow/configuration'
-require 'burstflow/workflow_helper'
 require 'burstflow/workflow'
-require 'burstflow/manager'
 require 'burstflow/job'
-require 'generators/burstflow/install/install_generator'
-
-
 require 'burstflow/worker'
 
 module Burstflow
-
-  def self.root
-    Pathname.new(__FILE__).parent.parent
-  end
-
-  def self.logger
-    ActiveJob::Base.logger
-  end
-
-  def self.configuration
-    @configuration ||= Configuration.new
-  end
-
-  def self.configure
-    yield configuration
-  end
 
 end

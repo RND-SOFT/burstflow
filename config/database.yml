@@ -3,7 +3,7 @@ development: &base
   host:     <%= ENV['DATABASE_HOST'] || 'localhost' %>
   port:     <%= ENV['DATABASE_PORT'] || 5432 %>
   encoding: unicode
-  database: <%= ENV['DATABASE_NAME'] || 'burst_test' %>
+  database: <%= ENV['DATABASE_NAME'] || 'burstflow_test' %>
   pool:     150
   username: <%= ENV['DATABASE_USER'] || 'postgres' %>
   password: <%= ENV['DATABASE_PASS'] || '' %>

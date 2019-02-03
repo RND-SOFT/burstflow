@@ -1,4 +1,5 @@
-class Burstflow::Manager
+module Burstflow
+class Manager
 
   attr_accessor :workflow
 
@@ -118,4 +119,5 @@ private
     end
   end
 
+end
 end
