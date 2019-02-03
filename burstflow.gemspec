@@ -1,7 +1,7 @@
-$:.push File.expand_path("lib", __dir__)
+$:.push File.expand_path('lib', __dir__)
 
 # Maintain your gem's version:
-require "burstflow/version"
+require 'burstflow/version'
 
 Gem::Specification.new do |spec|
   spec.name          = 'burstflow'
@@ -19,9 +19,9 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'activejob'
   spec.add_dependency 'activerecord'
-  
+
   spec.add_development_dependency 'bundler'
+  spec.add_development_dependency 'generator_spec'
   spec.add_development_dependency 'rake'
   spec.add_development_dependency 'rspec'
-  spec.add_development_dependency  'generator_spec'
 end

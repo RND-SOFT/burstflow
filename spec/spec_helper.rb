@@ -13,7 +13,7 @@ ActiveJob::Base.logger = nil
 $root = File.join(File.dirname(__dir__), 'spec')
 Dir[File.join($root, 'support', '**', '*.rb')].each {|f| require f }
 
-#ActiveJob::Base.logger = ActiveSupport::TaggedLogging.new(ActiveSupport::Logger.new(STDOUT))
+# ActiveJob::Base.logger = ActiveSupport::TaggedLogging.new(ActiveSupport::Logger.new(STDOUT))
 ActiveJob::Base.logger = ActiveSupport::Logger.new('/dev/null')
 
 

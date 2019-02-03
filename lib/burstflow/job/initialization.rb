@@ -1,8 +1,8 @@
 module Burstflow::Job::Initialization
-  extend  ActiveSupport::Concern
+
+  extend ActiveSupport::Concern
 
   included do
-
     def initialize(workflow, job_config = {})
       @workflow = workflow
       assign_default_values(job_config)
@@ -21,15 +21,12 @@ module Burstflow::Job::Initialization
     def reload
       assign_default_values(@workflow.job_hash(self.id))
     end
-
   end
 
   class_methods do
-
     def from_hash(workflow, job_config)
       job_config[:klass].constantize.new(workflow, job_config)
     end
-
   end
 
 end

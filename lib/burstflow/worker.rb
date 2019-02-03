@@ -27,33 +27,33 @@ class Burstflow::Worker < ::ActiveJob::Base
     set_incoming_payloads(job)
   end
 
-  def perform(workflow_id, job_id, resume_data = nil)
+  def perform(_workflow_id, _job_id, resume_data = nil)
     result = if resume_data.nil?
-      job.start!
-      job.save!
-  
-      job.perform_now
-    else
-      job.resume!
-      job.save!
-      
-      job.resume_now(resume_data)
+               job.start!
+               job.save!
+
+               job.perform_now
+             else
+               job.resume!
+               job.save!
+
+               job.resume_now(resume_data)
     end
 
     @manager.job_performed!(job, result)
   end
 
-private
+  private
 
-  def set_incoming_payloads job
-    job.payloads = job.incoming.map do |job_id|
-      incoming = workflow.job(job_id)
-      {
-        id: incoming.id,
-        class: incoming.klass.to_s,
-        value: incoming.output
-      }
+    def set_incoming_payloads(job)
+      job.payloads = job.incoming.map do |job_id|
+        incoming = workflow.job(job_id)
+        {
+          id: incoming.id,
+          class: incoming.klass.to_s,
+          value: incoming.output
+        }
+      end
     end
-  end
 
 end

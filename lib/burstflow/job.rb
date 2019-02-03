@@ -1,12 +1,13 @@
-require "active_support/rescuable"
-require "active_job/callbacks"
+require 'active_support/rescuable'
+require 'active_job/callbacks'
 
 class Burstflow::Job
-  require "burstflow/job/exception"
-  require "burstflow/job/model"
-  require "burstflow/job/initialization"
-  require "burstflow/job/state"
-  require "burstflow/job/callbacks"
+
+  require 'burstflow/job/exception'
+  require 'burstflow/job/model'
+  require 'burstflow/job/initialization'
+  require 'burstflow/job/state'
+  require 'burstflow/job/callbacks'
 
   include Burstflow::Job::Model
   include Burstflow::Job::Initialization
@@ -30,28 +31,28 @@ class Burstflow::Job
   end
 
   # execute this code by ActiveJob. You may return Burstflow::Job::SUSPEND to suspend job, or call suspend method
-  def perform
-  end
+  def perform; end
 
   def perform_now
     run_callbacks :perform do
       perform
     end
-  rescue => exception
+  rescue StandardError => exception
     rescue_with_handler(exception) || raise
   end
 
   # execute this code when resumes after suspending
   def resume(data)
-    raise InternalError.new(self, "Can't perform resume: not resumed") if !resumed?
+    raise InternalError.new(self, "Can't perform resume: not resumed") unless resumed?
+
     set_output(data)
   end
 
-  def resume_now data
+  def resume_now(data)
     run_callbacks :resume do
       resume(data)
     end
-  rescue => exception
+  rescue StandardError => exception
     rescue_with_handler(exception) || raise
   end
 
@@ -62,13 +63,13 @@ class Burstflow::Job
 
   # mark execution as suspended
   def suspend
-    raise InternalError.new(self, "Can't suspend: not running") if !running?
+    raise InternalError.new(self, "Can't suspend: not running") unless running?
+
     set_output(SUSPEND)
   end
 
-  def configure *args, &block
+  def configure(*args, &block)
     workflow.with_lock do
-
       builder = Burstflow::Workflow::Builder.new(workflow, *args, &block)
       workflow.flow['jobs_config'] = builder.as_json
       workflow.save!
@@ -78,12 +79,12 @@ class Burstflow::Job
 
   def attributes
     {
-      workflow_id: self.workflow_id,
-      id: self.id,
-      klass: self.klass,
+      workflow_id: workflow_id,
+      id: id,
+      klass: klass,
       params: params,
-      incoming: self.incoming,
-      outgoing: self.outgoing,
+      incoming: incoming,
+      outgoing: outgoing,
       output: output,
       started_at: started_at,
       enqueued_at: enqueued_at,
@@ -91,12 +92,8 @@ class Burstflow::Job
       failed_at: failed_at,
       suspended_at: suspended_at,
       resumed_at: resumed_at,
-      failure: self.failure
+      failure: failure
     }
   end
-
-  
-
-
 
 end

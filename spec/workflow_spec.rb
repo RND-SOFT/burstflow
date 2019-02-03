@@ -6,32 +6,36 @@ describe Burstflow::Workflow do
   WfJob3 = Class.new(Burstflow::Job)
 
   class Workflow1 < Burstflow::Workflow
+
     $conf1 = configure do |arg1, arg2|
-      $jobid1 = run WfJob1, params: { param1: true, arg: arg1}
-      $jobid2 = run WfJob2, params: { param2: true, arg: arg2}, after: WfJob1
+      $jobid1 = run WfJob1, params: { param1: true, arg: arg1 }
+      $jobid2 = run WfJob2, params: { param2: true, arg: arg2 }, after: WfJob1
       $jobid3 = run WfJob3, before: WfJob2, after: $jobid1
       $jobid4 = run WfJob3, after: $jobid3
     end
+
   end
 
   class Workflow2 < Burstflow::Workflow
+
     $conf2 = configure do |arg1, arg2|
-      $jobid1 = run WfJob1, params: { param1: true, arg: arg1}
-      $jobid2 = run WfJob2, params: { param2: true, arg: arg2}, after: WfJob1
+      $jobid1 = run WfJob1, params: { param1: true, arg: arg1 }
+      $jobid2 = run WfJob2, params: { param2: true, arg: arg2 }, after: WfJob1
       $jobid3 = run WfJob3, before: WfJob2, after: $jobid1
       $jobid4 = run WfJob3, after: $jobid3
     end
+
   end
 
-  describe "initializing" do
-    it "class level configuration" do
+  describe 'initializing' do
+    it 'class level configuration' do
       expect(Burstflow::Workflow.configuration).to eq nil
       expect(Workflow1.configuration).to eq $conf1
       expect(Workflow2.configuration).to eq $conf2
       expect($conf1).not_to eq $conf2
     end
 
-    it "build" do
+    it 'build' do
       Workflow1.build(:arg1, :arg2).save!
       wf1 = Workflow1.first
       jobs = wf1.flow['jobs_config']
@@ -39,58 +43,53 @@ describe Burstflow::Workflow do
       expect(jobs.count).to eq 4
       expect(wf1.initial_jobs.count).to eq 1
 
-      expect(jobs[$jobid1]).to include(:id, 
-        klass: WfJob1.to_s,
-        incoming: [],
-        outgoing: [$jobid2, $jobid3],
-        workflow_id: wf1.id,
-        params: {'param1' => true, 'arg' => 'arg1'})
+      expect(jobs[$jobid1]).to include(:id,
+                                       klass: WfJob1.to_s,
+                                       incoming: [],
+                                       outgoing: [$jobid2, $jobid3],
+                                       workflow_id: wf1.id,
+                                       params: { 'param1' => true, 'arg' => 'arg1' })
 
       expect(jobs[$jobid2]).to include(:id,
-        klass: WfJob2.to_s,
-        incoming: [$jobid1, $jobid3],
-        outgoing: [],
-        workflow_id: wf1.id,
-        params: {'param2' => true, 'arg' => 'arg2'})
+                                       klass: WfJob2.to_s,
+                                       incoming: [$jobid1, $jobid3],
+                                       outgoing: [],
+                                       workflow_id: wf1.id,
+                                       params: { 'param2' => true, 'arg' => 'arg2' })
 
       expect(jobs[$jobid3]).to include(:id,
-        klass: WfJob3.to_s,
-        incoming: [$jobid1],
-        outgoing: [$jobid2, $jobid4],
-        workflow_id: wf1.id,
-        params: nil)
+                                       klass: WfJob3.to_s,
+                                       incoming: [$jobid1],
+                                       outgoing: [$jobid2, $jobid4],
+                                       workflow_id: wf1.id,
+                                       params: nil)
 
       expect(jobs[$jobid4]).to include(:id,
-        klass: WfJob3.to_s,
-        incoming: [$jobid3],
-        outgoing: [],
-        workflow_id: wf1.id,
-        params: nil)
+                                       klass: WfJob3.to_s,
+                                       incoming: [$jobid3],
+                                       outgoing: [],
+                                       workflow_id: wf1.id,
+                                       params: nil)
     end
-
   end
 
-  describe "executing" do
-
-    def perform_enqueued_job wf, enqueued_job
+  describe 'executing' do
+    def perform_enqueued_job(wf, enqueued_job)
       enqueued_job[:job].new(*enqueued_job[:args]).perform_now
 
       queue_adapter.performed_jobs << enqueued_job
       queue_adapter.enqueued_jobs.delete(enqueued_job)
-      
+
       wf.reload
     end
 
     def perform_enqueued_jobs_async
-
       jobs = Enumerator.new do |y|
-        while queue_adapter.enqueued_jobs.count > 0
-          y << queue_adapter.enqueued_jobs.shift
-        end
+        y << queue_adapter.enqueued_jobs.shift while queue_adapter.enqueued_jobs.count > 0
       end
 
       result = yield
-      while queue_adapter.enqueued_jobs.count > 0 do
+      while queue_adapter.enqueued_jobs.count > 0
 
         threads = jobs.map do |job|
           Thread.new(job) do |job|
@@ -104,14 +103,14 @@ describe Burstflow::Workflow do
       result
     end
 
-    describe "complex" do
-      let(:wf){Workflow1.build(:arg1, :arg2)}
+    describe 'complex' do
+      let(:wf){ Workflow1.build(:arg1, :arg2) }
 
       before do
         wf.start!
       end
 
-      it "success story one by one" do
+      it 'success story one by one' do
         expect(Burstflow::Worker).to have_jobs(wf.id, [$jobid1])
 
         expect(queue_adapter.enqueued_jobs.count).to eq 1
@@ -128,7 +127,7 @@ describe Burstflow::Workflow do
         expect(wf.jobs.count(&:started?)).to eq 1
         expect(wf.jobs.count(&:finished?)).to eq 1
         expect(wf.jobs.count(&:ready_to_start?)).to eq 0
-    
+
         perform_enqueued_job(wf, queue_adapter.enqueued_jobs.first)
         expect(queue_adapter.enqueued_jobs.count).to eq 2
         expect(queue_adapter.enqueued_jobs.first).to include(args: [wf.id, $jobid2])
@@ -145,17 +144,16 @@ describe Burstflow::Workflow do
         expect(wf.jobs.count(&:started?)).to eq 3
         expect(wf.jobs.count(&:finished?)).to eq 3
         expect(wf.jobs.count(&:ready_to_start?)).to eq 0
-        
+
         perform_enqueued_job(wf, queue_adapter.enqueued_jobs.first)
         expect(queue_adapter.enqueued_jobs.count).to eq 0
         expect(wf.jobs.count(&:enqueued?)).to eq 4
         expect(wf.jobs.count(&:started?)).to eq 4
         expect(wf.jobs.count(&:finished?)).to eq 4
         expect(wf.jobs.count(&:ready_to_start?)).to eq 0
-
       end
 
-      it "success story all at once sync" do
+      it 'success story all at once sync' do
         perform_enqueued_jobs do
           perform_enqueued_job(wf, queue_adapter.enqueued_jobs.first)
         end
@@ -167,7 +165,7 @@ describe Burstflow::Workflow do
         expect(wf.jobs.count(&:ready_to_start?)).to eq 0
       end
 
-      it "success story all at once async", threads: true do
+      it 'success story all at once async', threads: true do
         perform_enqueued_jobs_async do
           perform_enqueued_job(wf, queue_adapter.enqueued_jobs.first)
         end
@@ -181,73 +179,81 @@ describe Burstflow::Workflow do
       end
     end
 
-    describe "concurrency" do
+    describe 'concurrency' do
       class MapJob1 < Burstflow::Job
+
         def perform
           set_output(params['i'])
         end
+
       end
 
       class ReduceJob1 < Burstflow::Job
+
         def perform
-          set_output(payloads.map{|p| p[:value]}.sum)
+          set_output(payloads.map{|p| p[:value] }.sum)
         end
+
       end
 
       class ConcWorkflow < Burstflow::Workflow
+
         configure do |size|
           size.to_i.times.to_a.shuffle.each do |i|
-            run MapJob1, params: {i: i}, before: ReduceJob1
+            run MapJob1, params: { i: i }, before: ReduceJob1
           end
 
           $jobid = run ReduceJob1
         end
-      end    
 
-      let(:count){50}
-      let(:expected_result){count.times.sum}
+      end
 
-      it "sync" do
+      let(:count){ 50 }
+      let(:expected_result){ count.times.sum }
+
+      it 'sync' do
         wf = perform_enqueued_jobs do
           ConcWorkflow.build(count).start!
         end.reload
-        
+
         expect(wf.job($jobid).output).to eq expected_result
       end
 
-      it "threaded", threads: true do
+      it 'threaded', threads: true do
         wf = perform_enqueued_jobs_async do
           ConcWorkflow.build(count).start!
         end.reload
-        
+
         expect(wf.job($jobid).output).to eq expected_result
       end
     end
 
-    describe "simple" do
+    describe 'simple' do
       WfSimpleJob = Class.new(Burstflow::Job)
       WfFailureJob = Class.new(Burstflow::Job) do
-        def perform 
-          raise "ex"
+        def perform
+          raise 'ex'
         end
       end
 
       WfSuspendJob = Class.new(Burstflow::Job) do
-        def perform 
-          return Burstflow::Job::SUSPEND
+        def perform
+          Burstflow::Job::SUSPEND
         end
       end
 
-      describe "parallel failure" do
+      describe 'parallel failure' do
         class Workflow3 < Burstflow::Workflow
-          configure do |arg1, arg2|
+
+          configure do |_arg1, _arg2|
             $jobid1 = run WfSimpleJob
             $jobid2 = run WfFailureJob
             $jobid3 = run WfSimpleJob, after: $jobid2
           end
+
         end
 
-        it "run" do
+        it 'run' do
           wf = perform_enqueued_jobs do
             Workflow3.build.start!
           end.reload
@@ -265,16 +271,18 @@ describe Burstflow::Workflow do
         end
       end
 
-      describe "parallel suspend" do
+      describe 'parallel suspend' do
         class Workflow4 < Burstflow::Workflow
-          configure do |arg1, arg2|
+
+          configure do |_arg1, _arg2|
             $jobid1 = run WfSimpleJob
             $jobid2 = run WfSuspendJob
             $jobid3 = run WfSimpleJob, after: $jobid2
           end
+
         end
 
-        it "run" do
+        it 'run' do
           wf = perform_enqueued_jobs do
             Workflow4.build.start!
           end.reload
@@ -286,7 +294,7 @@ describe Burstflow::Workflow do
           expect(wf.job($jobid3).enqueued?).to eq false
 
           wf = perform_enqueued_jobs do
-            wf.resume!($jobid2, "gogogo")
+            wf.resume!($jobid2, 'gogogo')
           end.reload
 
           expect(wf.status).to eq Burstflow::Workflow::FINISHED
@@ -297,22 +305,22 @@ describe Burstflow::Workflow do
         end
       end
 
-      describe "dynamic job creation" do
-        let(:count) {10}
-        let(:expected_result) {(count + 1).times.sum}
+      describe 'dynamic job creation' do
+        let(:count) { 10 }
+        let(:expected_result) { (count + 1).times.sum }
 
         WfDynamicJob = Class.new(Burstflow::Job) do
-          def perform 
+          def perform
             if params['i'] > 0
-              configure(self.id, params) do |id, params|
-                $lasjobid = run WfDynamicJob, params: {i: params['i'] - 1}, after: id
+              configure(id, params) do |id, params|
+                $lasjobid = run WfDynamicJob, params: { i: params['i'] - 1 }, after: id
               end
             end
 
             output = if payload = payloads.first
-              payload[:value] + params['i']
-            else
-              params['i']
+                       payload[:value] + params['i']
+                     else
+                       params['i']
             end
 
             set_output(output)
@@ -320,12 +328,14 @@ describe Burstflow::Workflow do
         end
 
         class WorkflowDynamic < Burstflow::Workflow
+
           configure do |count|
-            run WfDynamicJob, params: {i: count}
+            run WfDynamicJob, params: { i: count }
           end
+
         end
 
-        it "run" do
+        it 'run' do
           wf = WorkflowDynamic.build(count)
           wf.save!
 
@@ -338,11 +348,9 @@ describe Burstflow::Workflow do
           expect(wf.jobs.count).to eq 11
           expect(wf.job($lasjobid).output).to eq expected_result
         end
-
       end
 
-      describe "callbacks" do
-
+      describe 'callbacks' do
         WfCallJob = Class.new(Burstflow::Job) do
           before_enqueue :be
           before_perform :bp
@@ -350,36 +358,60 @@ describe Burstflow::Workflow do
           before_resume  :br
           before_failure :bf
 
-          def be;$be = true;end
-          def bp;$bp = true;end
-          def bs;$bs = true;end
-          def br;$br = true;end
-          def bf;$bf = true;end
+          def be
+            $be = true
+          end
+
+          def bp
+            $bp = true
+          end
+
+          def bs
+            $bs = true
+          end
+
+          def br
+            $br = true
+          end
+
+          def bf
+            $bf = true
+          end
 
           def perform
-            suspend()
+            suspend
           end
 
-          def resume data
-            raise "ex"
+          def resume(_data)
+            raise 'ex'
           end
         end
-  
+
         class WorkflowCall < Burstflow::Workflow
+
           before_suspend :wbs
           before_resume  :wbr
           before_failure :wbf
 
-          def wbs;$wbs = true;end
-          def wbr;$wbr = true;end
-          def wbf;$wbf = true;end
+          def wbs
+            $wbs = true
+          end
+
+          def wbr
+            $wbr = true
+          end
+
+          def wbf
+            $wbf = true
+          end
 
           configure do
             $jobid1 = run WfCallJob
           end
+
         end
 
-        it "run" do
+        it 'run' do
           expect([$be, $bp, $bs, $br, $bf].any?).to eq false
           expect([$wbs, $wbr, $wbf].any?).to eq false
 
@@ -402,12 +434,9 @@ describe Burstflow::Workflow do
           expect([$wbs, $wbr, $wbf].all?).to eq true
         end
       end
-
-
     end
-
   end
- 
+
   context 'model' do
     it 'default store' do
       w = Burstflow::Workflow.new
@@ -429,7 +458,5 @@ describe Burstflow::Workflow do
       w2 = Burstflow::Workflow.find(w.id)
       expect(w2.attributes).to include(w.attributes)
     end
-
   end
-
 end

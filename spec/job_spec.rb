@@ -57,7 +57,7 @@ describe Burstflow::Job do
     it '#fail!' do
       subject.enqueue!
       subject.start!
-      subject.fail! "error"
+      subject.fail! 'error'
 
       expect(subject.finished?).to eq true
       expect(subject.succeeded?).to eq false
