@@ -2,6 +2,8 @@
 
 <!-- ## [![](http://i.imgur.com/ya8Wnyl.png)](https://chaps.io) proudly made by [Chaps](https://chaps.io) -->
 
+[![Build Status](https://travis-ci.com/RnD-Soft/burstflow.svg?branch=master)](https://travis-ci.com/RnD-Soft/burstflow) [![Gem Version](https://badge.fury.io/rb/burstflow.svg)](https://badge.fury.io/rb/burstflow)
+
 Burstflow is a parallel workflow runner using [ActiveRecord] and [ActiveJob](https://guides.rubyonrails.org/v4.2/active_job_basics.html) for scheduling and executing jobs.
 
 This gem is higly inspired by [Gush](https://github.com/chaps-io/gush). But not tied to Reddis or Sidekiq like Gush.
