@@ -211,7 +211,7 @@ flow.status
 
 ### Pipelining
 
-Burst offers a useful tool to pass results of a job to its dependencies, so they can act differently.
+Burstflow offers a useful tool to pass results of a job to its dependencies, so they can act differently.
 
 **Example:**
 
