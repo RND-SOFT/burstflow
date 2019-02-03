@@ -2,25 +2,31 @@
 
 <!-- ## [![](http://i.imgur.com/ya8Wnyl.png)](https://chaps.io) proudly made by [Chaps](https://chaps.io) -->
 
-Burst is a parallel workflow runner using [ActiveRecord] and [ActiveJob](https://guides.rubyonrails.org/v4.2/active_job_basics.html) for scheduling and executing jobs.
+Burstflow is a parallel workflow runner using [ActiveRecord] and [ActiveJob](https://guides.rubyonrails.org/v4.2/active_job_basics.html) for scheduling and executing jobs.
 
-This gem is higly inspired by [Gush](https://github.com/chaps-io/gush). But burst not tied to Reddis or Sidekiq.
+This gem is higly inspired by [Gush](https://github.com/chaps-io/gush). But not tied to Reddis or Sidekiq like Gush.
 
-The main feature of this runner is availablity to **suspend** job(and whole workflow) and **resume** it in future. For example if your job makes asynchronous request and will receive a response some time later. In this case, the job can send request and suspend until some external event resumes it eventually.
+ActiveRecord used as persisted store during workflow execution.
 
-Another difference from Gush is **Dynamic workflows**. Any job can produce another jobs while executing. This jobs has its parent as incomming jobs, and all parents outgoing jobs as own outgoings.
+Additional features:
+
+* **susped** and **resume** job(and whole workflow). For example if your job makes asynchronous request and will receive a response some time later. In this case, the job can send request and suspend until some external event resumes it eventually.
+* before/after callbacks on jobs level
+* before/after callbacks on workflow level
+* **Dynamic workflows**. Any job can produce another jobs while executing. This jobs has its parent as incomming jobs, and all parents outgoing jobs as own outgoings.
+
 
 ## Installation
 
 ### 1. Add `burst` to Gemfile
 
 ```ruby
-gem 'burst', '~> 0.1.0'
+gem 'burstflow', '~> 0.2.0'
 ```
 
 ### 2. Run migrations
 
-Under development
+```rake burstflow:install:migrations```
 
 ## Example
 
@@ -29,7 +35,7 @@ Here is a complete example of a workflow you can create:
 
 ```ruby
 # app/workflows/sample_workflow.rb
-class SampleWorkflow < Burst::Workflow
+class SampleWorkflow < Burstflow::Workflow
   configure do |url_to_fetch_from|
     run FetchJob1, params: { url: url_to_fetch_from }
     run FetchJob2, params: { some_flag: true, url: 'http://url.com' }
@@ -56,7 +62,7 @@ and this is how the graph will look like:
 Let's start with the simplest workflow possible, consisting of a single job:
 
 ```ruby
-class SimpleWorkflow < Burst::Workflow
+class SimpleWorkflow < Burstflow::Workflow
   configure do 
     run DownloadJob
   end
@@ -74,12 +80,12 @@ class SimpleWorkflow < Burst::Workflow
 end
 ```
 
-We just told Burst to execute `SaveJob` right after `DownloadJob` finishes **successfully**.
+We just told Burstflow to execute `SaveJob` right after `DownloadJob` finishes **successfully**.
 
 But what if your job must have multiple dependencies? That's easy, just provide an array to the `after` attribute:
 
 ```ruby
-class SimpleWorkflow < Burst::Workflow
+class SimpleWorkflow < Burstflow::Workflow
   configure do
     run FirstDownloadJob
     run SecondDownloadJob
@@ -98,7 +104,7 @@ With this simple syntax you can build any complex workflows you can imagine!
 `run` method also accepts `before:` attribute to define the opposite association. So we can write the same workflow as above, but like this:
 
 ```ruby
-class SimpleWorkflow < Burst::Workflow
+class SimpleWorkflow < Burstflow::Workflow
   configure do
     run FirstDownloadJob, before: SaveJob
     run SecondDownloadJob, before: SaveJob
@@ -118,7 +124,7 @@ Workflows can accept any primitive arguments in their constructor, which then wi
 Let's assume we are writing a book publishing workflow which needs to know where the PDF of the book is and under what ISBN it will be released:
 
 ```ruby
-class PublishBookWorkflow < Burst::Workflow
+class PublishBookWorkflow < Burstflow::Workflow
   configure do |url, isbn|
     run FetchBook, params: { url: url }
     run PublishBook, params: { book_isbn: isbn }, after: FetchBook
@@ -136,7 +142,7 @@ and that's basically it for defining workflows, see below on how to define jobs:
 
 ## Defining jobs
 
-The simplest job is a class inheriting from `Burst::Job` and responding to `perform` and `resume` method. Much like any other ActiveJob class.
+The simplest job is a class inheriting from `Burstflow::Job` and responding to `perform` and `resume` method. Much like any other ActiveJob class.
 
 ```ruby
 class FetchBook < Burst::Job
@@ -189,14 +195,14 @@ flow = PublishBookWorkflow.build("http://url.com/book.pdf", "978-0470081204")
 flow.start!
 ```
 
-Now Burst will start processing jobs in the background using ActiveJob and your chosen backend.
+Now Burstflow will start processing jobs in the background using ActiveJob and your chosen backend.
 
 ### 3. Monitor its progress:
 
 ```ruby
 flow.reload
 flow.status
-#=> :running|:finished|:failed
+#=> :running|:finished|:failed|:suspended
 ```
 
 `reload` is needed to see the latest status, since workflows are updated asynchronously.
@@ -228,9 +234,9 @@ end
 Now, since `DownloadVideo` finished and its dependant job `EncodeVideo` started, we can access that payload inside it:
 
 ```ruby
-class EncodeVideo < Burst::Job
+class EncodeVideo < Burstflow::Job
   def perform
-    video_path = payloads.first[:output]
+    video_path = payloads.first[:value]
   end
 end
 ```
@@ -243,7 +249,7 @@ end
   {
     id: "DownloadVideo-41bfb730-b49f-42ac-a808-156327989294" # unique id of the ancestor job
     class: "DownloadVideo",
-    output: "https://s3.amazonaws.com/somebucket/downloaded-file.mp4" #the payload returned by DownloadVideo job using `output()` method
+    value: "https://s3.amazonaws.com/somebucket/downloaded-file.mp4" #the payload returned by DownloadVideo job using `output()` method
   }
 ]
 ```
@@ -259,7 +265,7 @@ As an example, let's write a workflow which accepts an array of users and has to
 
 ```ruby
 
-class ParentJob < Burst::Job
+class ParentJob < Burstflow::Job
   def perform
     configure do 
       params[:user_ids].map do |user_id|
@@ -286,7 +292,7 @@ https://github.com/chaps-io/gush#contributors
 
 ## Contributing
 
-1. Fork it ( https://github.com/RnD-Soft/burst/fork )
+1. Fork it ( https://github.com/RnD-Soft/burstflow/fork )
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
