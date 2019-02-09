@@ -12,6 +12,8 @@ module Burstflow
 
     def start_workflow!
       workflow.with_lock do
+        return false unless workflow.allow_to_start?
+
         workflow.run_callbacks :run do
           workflow.running!
           

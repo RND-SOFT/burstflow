@@ -27,6 +27,12 @@ module Burstflow
         builder.resolve_dependencies
         builder.as_json
       end
+
+ 
+      def singleton?
+        self.class.singleton?
+      end
+
     end
 
     class_methods do
@@ -41,6 +47,12 @@ module Burstflow
           end
         end
       end
+
+
+      def singleton?
+        return opts[:uniq]
+      end
+
 
       def options options
         @options ||= {}

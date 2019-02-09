@@ -29,6 +29,19 @@ module Burstflow
     attr_accessor :manager, :cache
     define_flow_attributes :jobs_config, :failures
 
+    validates :id, uniqueness: { case_sensitive: false }
+    validates :status, inclusion: { in: STATUSES }
+
+    validate  :persistance_of_running
+
+    scope :same, ->(w) {
+      if w.identifier
+        w.class.where(status: [RUNNING, SUSPENDED], identifier: w.identifier)
+      else
+        w.class.where(status: [RUNNING, SUSPENDED])
+      end
+    }
+
     after_initialize do
       @cache = {}
 
@@ -50,13 +63,18 @@ module Burstflow
       FINISHED.include?(status)
     end
 
-    def singleton?
-      self.class.opts[:uniq]
+    def allow_to_start?
+      if singleton?
+        !self.class.same(self).any?
+      else
+        true
+      end
     end
 
     def attributes
       {
         id: self.id,
+        identifier: self.identifier,
         jobs_config: self.jobs_config,
         type: self.class.to_s,
         status: status,
@@ -227,6 +245,16 @@ module Burstflow
       run_callbacks :cancelled do
         self.status = CANCELLED
         save!
+      end
+    end
+
+    def persistance_of_running
+      if singleton? && !allow_to_start?
+        if identifier
+          errors.add(:workflow, "with such identifier is still being running")
+        else
+          errors.add(:workflow, "with such type is still being running")
+        end
       end
     end
 

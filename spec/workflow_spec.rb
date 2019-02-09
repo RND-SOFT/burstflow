@@ -472,16 +472,61 @@ describe Burstflow::Workflow do
       expect(w2.attributes).to include(w.attributes)
     end
 
-    let(:wfc) {
-      Class.new(Burstflow::Workflow) do
-        options uniq: true
+    class UniqWorkflow < Burstflow::Workflow
+      options uniq: true
+      configure do |id|
+        set_identifier id
       end
-    }
+    end
 
     it "singleton" do
       expect(w.singleton?).to be_falsey
-      expect(wfc.new.singleton?).to eq true
+      expect(UniqWorkflow.new.singleton?).to eq true
     end
+
+    it "allow_to_start?" do
+      expect(w.allow_to_start?).to be_truthy
+      wf = UniqWorkflow.build(nil)
+      wf2 = UniqWorkflow.build(nil)
+      wf3 = UniqWorkflow.build('id1')
+      wf4 = UniqWorkflow.build('id1')
+      wf5 = UniqWorkflow.build('id2')
+      expect(wf.allow_to_start?).to be_truthy
+      expect(wf2.allow_to_start?).to be_truthy
+      expect(wf3.allow_to_start?).to be_truthy
+      expect(wf4.allow_to_start?).to be_truthy
+      expect(wf5.allow_to_start?).to be_truthy
+
+      wf.save!
+      expect(wf.allow_to_start?).to be_truthy
+      expect(wf2.allow_to_start?).to be_truthy
+      expect(wf3.allow_to_start?).to be_truthy
+      expect(wf4.allow_to_start?).to be_truthy
+      expect(wf5.allow_to_start?).to be_truthy
+
+      expect(wf.start!.as_json).to include(status: 'running')
+      expect(wf.persisted?).to eq true
+      expect(wf.allow_to_start?).to be_falsey
+      expect(wf2.allow_to_start?).to be_falsey
+      expect(wf2.save).to be_falsey
+      expect(wf3.allow_to_start?).to be_truthy
+      expect(wf4.allow_to_start?).to be_truthy
+      expect(wf5.allow_to_start?).to be_truthy
+
+      expect(wf3.start!.as_json).to include(status: 'running')
+      expect(wf.persisted?).to eq true
+      expect(wf.allow_to_start?).to be_falsey
+      expect(wf2.allow_to_start?).to be_falsey
+      expect(wf3.allow_to_start?).to be_falsey
+      expect(wf4.allow_to_start?).to be_falsey
+      expect(wf5.allow_to_start?).to be_truthy
+
+      expect(wf4.start!.as_json).to include(status: 'initial')
+      expect(wf4.persisted?).to eq false
+
+      expect(wf4.save).to be_falsey
+    end
+
 
     describe "states" do
       it "failed" do
