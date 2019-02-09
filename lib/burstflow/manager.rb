@@ -12,20 +12,24 @@ module Burstflow
 
     def start_workflow!
       workflow.with_lock do
-        workflow.runnig!
-
-        workflow.initial_jobs.each do |job|
-          enqueue_job!(job)
+        workflow.run_callbacks :run do
+          workflow.running!
+          
+          workflow.initial_jobs.each do |job|
+            enqueue_job!(job)
+          end
         end
       end
     end
 
     def resume_workflow!(job_id, data)
       workflow.with_lock do
-        workflow.resumed!
+        workflow.run_callbacks :resume do
+          workflow.resumed!
 
-        job = workflow.job(job_id)
-        resume_job!(job, data)
+          job = workflow.job(job_id)
+          resume_job!(job, data)
+        end
       end
     end
 
@@ -96,7 +100,10 @@ module Burstflow
           raise Burstflow::Workflow::InternalError.new(workflow, 'analyze_workflow_state must be called in transaction with lock!')
         end
 
-        if job.succeeded? && job.outgoing.any? && !workflow.has_errors?
+        if workflow.cancelled?
+          # do nothing
+          # workflow cancelled
+        elsif job.succeeded? && job.outgoing.any? && !workflow.has_errors?
           return enqueue_outgoing_jobs(job)
         else
           if workflow.has_scheduled_jobs?

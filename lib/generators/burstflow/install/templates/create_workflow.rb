@@ -6,6 +6,7 @@ class CreateWorkflow < ActiveRecord::Migration[5.1]
     create_table :burstflow_workflows, id: :uuid do |t|
       t.string :type, index: true
       t.string :status, index: true
+      t.string :identifier, index: true
       t.jsonb :flow, null: false, default: {}
 
       t.timestamps

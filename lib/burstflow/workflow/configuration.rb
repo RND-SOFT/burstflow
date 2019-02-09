@@ -42,6 +42,15 @@ module Burstflow
         end
       end
 
+      def options options
+        @options ||= {}
+        @options.merge! options
+      end
+
+      def opts
+        @options ||= {}
+      end
+
       def configure(&block)
         @configuration = block
       end

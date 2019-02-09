@@ -6,7 +6,7 @@ describe Burstflow::Workflow::Builder do
     BuilderJob2 = Class.new(Burstflow::Job)
     BuilderJob3 = Class.new(Burstflow::Job)
 
-    let(:workflow){ double(:workflow, id: 'id1', jobs_config: {}) }
+    let(:workflow){ double(:workflow, id: 'id1', jobs_config: {}, identifier: nil) }
 
     it 'without dependencies' do
       builder = Burstflow::Workflow::Builder.new workflow do

@@ -10,18 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20_180_101_000_001) do
-  # These are extensions that must be enabled in order to support this database
-  enable_extension 'pgcrypto'
-  enable_extension 'plpgsql'
+ActiveRecord::Schema.define(version: 2018_01_01_000001) do
 
-  create_table 'burstflow_workflows', id: :uuid, default: -> { 'gen_random_uuid()' }, force: :cascade do |t|
-    t.string 'type'
-    t.string 'status'
-    t.jsonb 'flow', default: {}, null: false
-    t.datetime 'created_at', null: false
-    t.datetime 'updated_at', null: false
-    t.index ['status'], name: 'index_burstflow_workflows_on_status'
-    t.index ['type'], name: 'index_burstflow_workflows_on_type'
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "pgcrypto"
+  enable_extension "plpgsql"
+
+  create_table "burstflow_workflows", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "type"
+    t.string "status"
+    t.string "identifier"
+    t.jsonb "flow", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["identifier"], name: "index_burstflow_workflows_on_identifier"
+    t.index ["status"], name: "index_burstflow_workflows_on_status"
+    t.index ["type"], name: "index_burstflow_workflows_on_type"
   end
+
 end

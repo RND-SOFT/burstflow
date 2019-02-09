@@ -55,7 +55,7 @@ module Burstflow::Job::State
     # mark job as suspended
     def suspend!
       raise Burstflow::Job::InternalError.new(self, "Can't suspend: already suspended") if suspended?
-      raise Burstflow::Job::InternalError.new(self, "Can't suspend: not runnig") unless running?
+      raise Burstflow::Job::InternalError.new(self, "Can't suspend: not running") unless running?
 
       self.suspended_at = current_timestamp
     end

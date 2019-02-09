@@ -15,11 +15,13 @@ module Burstflow
 
     INITIAL   = 'initial'.freeze
     RUNNING   = 'running'.freeze
-    FINISHED  = 'finished'.freeze
+    SUCCEEDED = 'succeeded'.freeze
     FAILED    = 'failed'.freeze
+    CANCELLED = 'cancelled'.freeze
     SUSPENDED = 'suspended'.freeze
 
-    STATUSES = [INITIAL, RUNNING, FINISHED, FAILED, SUSPENDED].freeze
+    STATUSES = [INITIAL, RUNNING, SUCCEEDED, FAILED, CANCELLED, SUSPENDED].freeze
+    FINISHED = [SUCCEEDED, FAILED, CANCELLED].freeze
 
     include Burstflow::Workflow::Configuration
     include Burstflow::Workflow::Callbacks
@@ -44,6 +46,14 @@ module Burstflow
       end
     end
 
+    def finished?
+      FINISHED.include?(status)
+    end
+
+    def singleton?
+      self.class.opts[:uniq]
+    end
+
     def attributes
       {
         id: self.id,
@@ -57,6 +67,7 @@ module Burstflow
     def self.build(*args)
       new.tap do |wf|
         builder = Burstflow::Workflow::Builder.new(wf, *args, &configuration)
+        wf.identifier = builder.identifier
         wf.flow = { 'jobs_config' => builder.as_json }
       end
     end
@@ -132,11 +143,12 @@ module Burstflow
 
     def complete!
       if has_errors?
+        #TODO test errors in failed! or callbacks
         failed!
       elsif has_suspended_jobs?
         suspended!
       else
-        finished!
+        succeeded!
       end
     end
 
@@ -156,9 +168,8 @@ module Burstflow
       last_job&.finished_at
     end
 
-    def runnig!
+    def running!
       raise InternalError.new(self, "Can't start: workflow already running") if running? || suspended?
-      raise InternalError.new(self, "Can't start: workflow already failed") if failed?
       raise InternalError.new(self, "Can't start: workflow already finished") if finished?
 
       self.status = RUNNING
@@ -166,46 +177,55 @@ module Burstflow
     end
 
     def failed!
-      run_callbacks :failure do
-        raise InternalError.new(self, "Can't fail: workflow already failed") if failed?
-        raise InternalError.new(self, "Can't fail: workflow already finished") if finished?
-        raise InternalError.new(self, "Can't fail: workflow in not runnig") unless running? || suspended?
+      raise InternalError.new(self, "Can't fail: workflow already finished") if finished?
+      raise InternalError.new(self, "Can't fail: workflow in not running") unless running? || suspended?
 
+      run_callbacks :failed do
         self.status = FAILED
-        save!
+        run_callbacks :finished do
+          save!
+        end
       end
     end
 
-    def finished!
-      run_callbacks :finish do
-        raise InternalError.new(self, "Can't finish: workflow already finished") if finished?
-        raise InternalError.new(self, "Can't finish: workflow already failed") if failed?
-        raise InternalError.new(self, "Can't finish: workflow in not runnig") unless running?
+    def succeeded!
+      raise InternalError.new(self, "Can't finish: workflow already finished") if finished?
+      raise InternalError.new(self, "Can't finish: workflow in not running") unless running?
 
-        self.status = FINISHED
-        save!
+      run_callbacks :succeeded do
+        self.status = SUCCEEDED
+        run_callbacks :finished do
+          save!
+        end
       end
     end
 
     def suspended!
-      run_callbacks :suspend do
-        raise InternalError.new(self, "Can't suspend: workflow already finished") if finished?
-        raise InternalError.new(self, "Can't suspend: workflow already failed") if failed?
-        raise InternalError.new(self, "Can't suspend: workflow in not runnig") unless running?
+      raise InternalError.new(self, "Can't suspend: workflow already finished") if finished?
+      raise InternalError.new(self, "Can't suspend: workflow in not running") unless running?
 
+      run_callbacks :suspend do
         self.status = SUSPENDED
-        save!
+        run_callbacks :finished do
+          save!
+        end
       end
     end
 
     def resumed!
-      run_callbacks :resume do
-        raise InternalError.new(self, "Can't resume: workflow already running") if running?
-        raise InternalError.new(self, "Can't resume: workflow already finished") if finished?
-        raise InternalError.new(self, "Can't resume: workflow already failed") if failed?
-        raise InternalError.new(self, "Can't resume: workflow in not suspended") unless suspended?
+      raise InternalError.new(self, "Can't resume: workflow already running") if running?
+      raise InternalError.new(self, "Can't resume: workflow already finished") if finished?
+      raise InternalError.new(self, "Can't resume: workflow in not suspended") unless suspended?
 
-        self.status = RUNNING
+      self.status = RUNNING
+      save!
+    end
+
+    def cancelled!
+      raise InternalError.new(self, "Can't cancell workflow already finished") if finished?
+
+      run_callbacks :cancelled do
+        self.status = CANCELLED
         save!
       end
     end

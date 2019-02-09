@@ -269,6 +269,15 @@ describe Burstflow::Workflow do
 
           expect(wf.job($jobid3).enqueued?).to eq false
         end
+
+        it "cancell" do
+          wf = Workflow3.build.start!
+          perform_enqueued_jobs_async do
+            wf.cancelled!
+          end
+
+          expect(wf.status).to eq Burstflow::Workflow::CANCELLED
+        end
       end
 
       describe 'parallel suspend' do
@@ -297,7 +306,7 @@ describe Burstflow::Workflow do
             wf.resume!($jobid2, 'gogogo')
           end.reload
 
-          expect(wf.status).to eq Burstflow::Workflow::FINISHED
+          expect(wf.status).to eq Burstflow::Workflow::SUCCEEDED
 
           expect(wf.job($jobid1).succeeded?).to eq true
           expect(wf.job($jobid2).succeeded?).to eq true
@@ -391,7 +400,8 @@ describe Burstflow::Workflow do
 
           before_suspend :wbs
           before_resume  :wbr
-          before_failure :wbf
+          before_failed  :wbf
+          before_finished  :wbfs
 
           def wbs
             $wbs = true
@@ -405,6 +415,10 @@ describe Burstflow::Workflow do
             $wbf = true
           end
 
+          def wbfs
+            $wbfs = true
+          end
+
           configure do
             $jobid1 = run WfCallJob
           end
@@ -413,7 +427,7 @@ describe Burstflow::Workflow do
 
         it 'run' do
           expect([$be, $bp, $bs, $br, $bf].any?).to eq false
-          expect([$wbs, $wbr, $wbf].any?).to eq false
+          expect([$wbs, $wbr, $wbf, $wbfs].any?).to eq false
 
           wf = perform_enqueued_jobs do
             WorkflowCall.build.start!
@@ -431,16 +445,16 @@ describe Burstflow::Workflow do
           expect(wf.job($jobid1).failure).to include(klass: 'RuntimeError', message: 'ex')
 
           expect([$be, $bp, $bs, $br, $bf].all?).to eq true
-          expect([$wbs, $wbr, $wbf].all?).to eq true
+          expect([$wbs, $wbr, $wbf, $wbfs].all?).to eq true
         end
       end
     end
   end
 
   context 'model' do
-    it 'default store' do
-      w = Burstflow::Workflow.new
+    let(:w){Burstflow::Workflow.new}
 
+    it 'default store' do
       expect(w.attributes).to include(:id, jobs_config: {}, type: Burstflow::Workflow.to_s)
 
       expect(w.initial?).to eq true
@@ -452,11 +466,51 @@ describe Burstflow::Workflow do
     end
 
     it 'store persistance' do
-      w = Burstflow::Workflow.new
       w.save!
 
       w2 = Burstflow::Workflow.find(w.id)
       expect(w2.attributes).to include(w.attributes)
+    end
+
+    let(:wfc) {
+      Class.new(Burstflow::Workflow) do
+        options uniq: true
+      end
+    }
+
+    it "singleton" do
+      expect(w.singleton?).to be_falsey
+      expect(wfc.new.singleton?).to eq true
+    end
+
+    describe "states" do
+      it "failed" do
+        w.running!
+        w.failed!
+
+        expect(w.failed?).to eq true
+        expect(w.succeeded?).to eq false
+        expect(w.finished?).to eq true
+      end
+
+      it "succeeded" do
+        w.running!
+        w.succeeded!
+
+        expect(w.failed?).to eq false
+        expect(w.succeeded?).to eq true
+        expect(w.finished?).to eq true
+      end
+
+      it "calcelled" do
+        w.running!
+        w.cancelled!
+
+        expect(w.failed?).to eq false
+        expect(w.succeeded?).to eq false
+        expect(w.cancelled?).to eq true
+        expect(w.finished?).to eq true
+      end
     end
   end
 end

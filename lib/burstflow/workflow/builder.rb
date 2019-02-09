@@ -1,9 +1,11 @@
 module Burstflow
 
   class Workflow::Builder
-
+    attr_accessor :identifier
+    
     def initialize(workflow, *args, &block)
       @workflow = workflow
+      @identifier = @workflow.identifier
       @deps = []
       @jobs_by_class = {}
       @jobs_by_id = {}
@@ -27,7 +29,11 @@ module Burstflow
 
       instance_exec *args, &block
       resolve_dependencies
-      end
+    end
+
+    def set_identifier identifier
+      @identifier = identifier
+    end
 
     def run(klass, opts = {})
       opts = opts.with_indifferent_access
