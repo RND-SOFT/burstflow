@@ -18,11 +18,11 @@ module Burstflow::Workflow::Callbacks
         end
 
         define_singleton_method "after_#{name}".to_sym do |*filters, &blk|
-          set_callback(name.to_sym, :before, *filters, &blk)
+          set_callback(name.to_sym, :after, *filters, &blk)
         end
 
         define_singleton_method "around_#{name}".to_sym do |*filters, &blk|
-          set_callback(name.to_sym, :before, *filters, &blk)
+          set_callback(name.to_sym, :around, *filters, &blk)
         end
       end
     end

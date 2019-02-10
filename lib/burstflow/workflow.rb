@@ -5,7 +5,6 @@ require 'burstflow/manager'
 module Burstflow
 
   class Workflow < ActiveRecord::Base
-
     require 'burstflow/workflow/exception'
     require 'burstflow/workflow/builder'
     require 'burstflow/workflow/configuration'
@@ -23,23 +22,31 @@ module Burstflow
     STATUSES = [INITIAL, RUNNING, SUCCEEDED, FAILED, CANCELLED, SUSPENDED].freeze
     FINISHED = [SUCCEEDED, FAILED, CANCELLED].freeze
 
-    include Burstflow::Workflow::Configuration
     include Burstflow::Workflow::Callbacks
+    include Burstflow::Workflow::Configuration
 
     attr_accessor :manager, :cache
-    define_flow_attributes :jobs_config, :failures
+    define_flow_attributes :jobs_config, :failures, :args
 
     validates :id, uniqueness: { case_sensitive: false }
     validates :status, inclusion: { in: STATUSES }
 
-    validate  :persistance_of_running
+    validate  :persistance_of_running, on: :create
 
     scope :same, ->(w) {
       if w.identifier
-        w.class.where(status: [RUNNING, SUSPENDED], identifier: w.identifier)
+        w.class.where(status: [RUNNING, SUSPENDED], identifier: w.identifier).where.not(id: w.id)
       else
-        w.class.where(status: [RUNNING, SUSPENDED])
+        w.class.where(status: [RUNNING, SUSPENDED]).where.not(id: w.id)
       end
+    }
+
+    scope :finihsed, -> {
+      where(status: FINISHED)
+    }
+
+    scope :running, -> {
+      where(status: [RUNNING, SUSPENDED])
     }
 
     after_initialize do
@@ -78,7 +85,8 @@ module Burstflow
         jobs_config: self.jobs_config,
         type: self.class.to_s,
         status: status,
-        failures: failures
+        failures: failures,
+        args: args
       }
     end
 
@@ -86,7 +94,7 @@ module Burstflow
       new.tap do |wf|
         builder = Burstflow::Workflow::Builder.new(wf, *args, &configuration)
         wf.identifier = builder.identifier
-        wf.flow = { 'jobs_config' => builder.as_json }
+        wf.flow = { 'jobs_config' => builder.as_json, args: [*args]}
       end
     end
 
@@ -95,14 +103,18 @@ module Burstflow
       super
     end
 
-    def start!
-      manager.start_workflow!
+    def start! wait_until = Time.now
+      manager.start_workflow! wait_until
       self
     end
 
     def resume!(job_id, data)
       manager.resume_workflow!(job_id, data)
       self
+    end
+
+    def cancell!
+      manager.cancell_workflow!
     end
 
     def jobs
@@ -224,9 +236,7 @@ module Burstflow
 
       run_callbacks :suspend do
         self.status = SUSPENDED
-        run_callbacks :finished do
-          save!
-        end
+        save!
       end
     end
 
@@ -244,7 +254,9 @@ module Burstflow
 
       run_callbacks :cancelled do
         self.status = CANCELLED
-        save!
+        run_callbacks :finished do
+          save!
+        end
       end
     end
 

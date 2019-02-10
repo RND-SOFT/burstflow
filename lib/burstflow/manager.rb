@@ -10,7 +10,7 @@ module Burstflow
 
     # workflow management
 
-    def start_workflow!
+    def start_workflow! wait_until
       workflow.with_lock do
         return false unless workflow.allow_to_start?
 
@@ -18,7 +18,7 @@ module Burstflow
           workflow.running!
           
           workflow.initial_jobs.each do |job|
-            enqueue_job!(job)
+            enqueue_job!(job, wait_until)
           end
         end
       end
@@ -35,12 +35,18 @@ module Burstflow
       end
     end
 
+    def cancell_workflow!
+      workflow.with_lock do
+        workflow.cancelled!
+      end
+    end
+
     # Mark job enqueued and enqueue it
-    def enqueue_job!(job)
+    def enqueue_job!(job, wait_until)
       job.run_callbacks :enqueue do
         job.enqueue!
         job.save! do
-          Burstflow::Worker.perform_later(workflow.id, job.id)
+          Burstflow::Worker.set(wait_until: wait_until).perform_later(workflow.id, job.id)
         end
       end
     end
@@ -122,7 +128,7 @@ module Burstflow
         job.outgoing.each do |job_id|
           out = workflow.job(job_id)
 
-          enqueue_job!(out) if out.ready_to_start?
+          enqueue_job!(out, Time.now) if out.ready_to_start?
         end
       end
 

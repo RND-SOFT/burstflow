@@ -28,9 +28,19 @@ module Burstflow
         builder.as_json
       end
 
- 
       def singleton?
         self.class.singleton?
+      end
+
+      def recurring?
+        self.class.recurring?
+      end
+
+      after_finished do
+        next if self.cancelled?
+        if delay = recurring?
+          self.class.build(*args).start!(delay.since)
+        end
       end
 
     end
@@ -51,6 +61,10 @@ module Burstflow
 
       def singleton?
         return opts[:uniq]
+      end
+
+      def recurring?
+        return opts[:recurring]
       end
 
 

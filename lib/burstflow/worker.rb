@@ -21,13 +21,15 @@ class Burstflow::Worker < ::ActiveJob::Base
     workflow_id, job_id, resume_data = arguments
 
     @workflow = Burstflow::Workflow.find(workflow_id)
-    @job = @workflow.job(job_id)
     @manager = @workflow.manager
 
+    @job = @workflow.job(job_id)
     set_incoming_payloads(job)
   end
 
   def perform(_workflow_id, _job_id, resume_data = nil)
+    return nil if workflow.cancelled?
+
     result = if resume_data.nil?
                job.start!
                job.save!
